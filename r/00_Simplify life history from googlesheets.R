@@ -8,11 +8,18 @@ url <- "https://docs.google.com/spreadsheets/d/1SMLvR9t8_F-gXapR2EemQMEPSw_bUbPL
 lh <- read_sheet(url)
 1
 
+saveRDS(lh, "data/life.history.RDS")
+
 synonyms <- read_sheet(url, sheet = 2)
+saveRDS(synonyms, "data/synonyms.RDS")
+
 fam.common.names <- read_sheet(url, sheet = 3)
 lumped.common.names <- read_sheet(url, sheet = 4)
 
 names(lh)
+
+# Read in maturity from other script
+maturity <- readRDS("data/maturity.RDS")
 
 # Make it simpler
 simple.lh <- lh %>%
@@ -21,6 +28,8 @@ simple.lh <- lh %>%
                 Local.source = "Harvey et al 2020") %>%
   
   dplyr::filter(!is.na(CAAB)) %>%
+  
+  full_join(maturity) %>%
   
   dplyr::select(c(Australian.source,
                 CAAB,
@@ -34,6 +43,8 @@ simple.lh <- lh %>%
                 Marine.region,
                 
                 Gloabal.source,
+                FB.code,
+                FB.length.at.maturity.cm,
                 Subfamily,
                 Global.Region,
                 Length.measure,
@@ -74,6 +85,8 @@ simple.lh <- lh %>%
                 )) %>%
   
   dplyr::rename('Scientific name' = Scientific)
+
+saveRDS(simple.lh, "data/simple.life.history.RDS")
 
 # Define styles for excel
 aus = createStyle(fontColour = "black", bgFill = "#D9EAD3")
@@ -145,27 +158,27 @@ conditionalFormatting(wb, "fish.life.history",
 
 
 conditionalFormatting(wb, "fish.life.history", 
-                      cols = 11:28, 
+                      cols = 11:30, 
                       rows = 1:(nrow(simple.lh)+1), 
                       rule = "!=0", 
                       style = global)
 
 
 conditionalFormatting(wb, "fish.life.history", 
-                      cols = 11:28, 
+                      cols = 11:30, 
                       rows = 1:(nrow(simple.lh)+1), 
                       rule = "=0", 
                       style = global)
 
 conditionalFormatting(wb, "fish.life.history", 
-                      cols = 29:47, 
+                      cols = 31:47, 
                       rows = 1:(nrow(simple.lh)+1), 
                       rule = "!=0", 
                       style = local)
 
 
 conditionalFormatting(wb, "fish.life.history", 
-                      cols = 29:47, 
+                      cols = 31:47, 
                       rows = 1:(nrow(simple.lh)+1), 
                       rule = "=0", 
                       style = local)
@@ -202,5 +215,3 @@ openXL(wb)
 
 # Save the workbook
 saveWorkbook(wb, "fish.life.history.xlsx", overwrite = TRUE)
-
-
