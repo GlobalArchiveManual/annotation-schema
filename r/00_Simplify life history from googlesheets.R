@@ -8,6 +8,10 @@ url <- "https://docs.google.com/spreadsheets/d/1SMLvR9t8_F-gXapR2EemQMEPSw_bUbPL
 lh <- read_sheet(url)
 1
 
+synonyms <- read_sheet(url, sheet = 2)
+fam.common.names <- read_sheet(url, sheet = 3)
+lumped.common.names <- read_sheet(url, sheet = 4)
+
 names(lh)
 
 # Make it simpler
@@ -79,15 +83,54 @@ local = createStyle(fontColour = "black", bgFill = "#FFF2CC")
 # Create new workbook
 wb = createWorkbook(title = "fish.life.history")
 
-# Add Sheet 1
+# Add Sheet 1 - Information -----
+addWorksheet(wb, "information")
+
+info <- data.frame(Source = c("Australian.source", "Global.source", "Local.source"),
+                 From = c("CAAB", "FishBase", "Harvey et al. 2020"),
+                 Description = c("Species list", "Life history information", "Fisheries and TEPS information"),
+                 Use = c("Region and ID QAQC", "life history and body size QAQC", "Metric calculations"),
+                 Comments = c("","includes L/W formula", "Need to add in maturity etc metrics"))
+
+# Add the data 
+writeData(wb, "information", info, headerStyle = header)
+
+# Set the width of cells to auto
+setColWidths(wb, "information", cols = 1:ncol(info), widths = "auto")
+
+# Colour the cells
+conditionalFormatting(wb, "information", 
+                      cols = 1, 
+                      rows = 1:(nrow(info)+1), 
+                      rule = "Australian.source", 
+                      type = "contains",
+                      style = aus)
+
+conditionalFormatting(wb, "information", 
+                      cols = 1, 
+                      rows = 1:(nrow(info)+1), 
+                      rule = "Global.source", 
+                      type = "contains",
+                      style = global)
+
+conditionalFormatting(wb, "information", 
+                      cols = 1, 
+                      rows = 1:(nrow(info)+1), 
+                      rule = "Local.source", 
+                      type = "contains",
+                      style = local)
+
+# Add Sheet 2 - fish.life.history ----
 addWorksheet(wb, "fish.life.history")
 
 # Add the data
 header = createStyle(textDecoration = "Bold")
 writeData(wb, "fish.life.history", simple.lh, headerStyle = header)
 
+# Set the width of cells to auto
+setColWidths(wb, "fish.life.history", cols = 1:ncol(simple.lh), widths = "auto")
 
-
+# Colour the cells
 conditionalFormatting(wb, "fish.life.history", 
                       cols = 1:10, 
                       rows = 1:(nrow(simple.lh)+1), 
@@ -127,7 +170,32 @@ conditionalFormatting(wb, "fish.life.history",
                       rule = "=0", 
                       style = local)
 
+# Add Sheet 3 - Synonyms ----
+addWorksheet(wb, "synonyms")
 
+# Add the data 
+writeData(wb, "synonyms", synonyms, headerStyle = header)
+
+# Set the width of cells to auto
+setColWidths(wb, "synonyms", cols = 1:ncol(synonyms), widths = "auto")
+
+# Add Sheet 4 - Family common names ----
+addWorksheet(wb, "family.common.names")
+
+# Add the data 
+writeData(wb, "family.common.names", fam.common.names, headerStyle = header)
+
+# Set the width of cells to auto
+setColWidths(wb, "family.common.names", cols = 1:ncol(fam.common.names), widths = "auto")
+
+# Add Sheet 5 - Lumped common names ----
+addWorksheet(wb, "lumped.common.names")
+
+# Add the data 
+writeData(wb, "lumped.common.names", lumped.common.names, headerStyle = header)
+
+# Set the width of cells to auto
+setColWidths(wb, "lumped.common.names", cols = 1:ncol(lumped.common.names), widths = "auto")
 
 # Show the workbook
 openXL(wb)
