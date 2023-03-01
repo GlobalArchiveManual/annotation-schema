@@ -106,10 +106,11 @@ info <- data.frame(Source = c("Australian.source", "Global.source", "Local.sourc
                  Comments = c("","includes L/W formula", "Need to add in maturity etc metrics"))
 
 # Add the data 
+header = createStyle(textDecoration = "Bold")
 writeData(wb, "information", info, headerStyle = header)
 
 # Set the width of cells to auto
-setColWidths(wb, "information", cols = 1:ncol(info), widths = "auto")
+# setColWidths(wb, "information", cols = 1:ncol(info), widths = "auto")
 
 # Colour the cells
 conditionalFormatting(wb, "information", 
@@ -137,11 +138,10 @@ conditionalFormatting(wb, "information",
 addWorksheet(wb, "fish.life.history")
 
 # Add the data
-header = createStyle(textDecoration = "Bold")
 writeData(wb, "fish.life.history", simple.lh, headerStyle = header)
 
 # Set the width of cells to auto
-setColWidths(wb, "fish.life.history", cols = 1:ncol(simple.lh), widths = "auto")
+# setColWidths(wb, "fish.life.history", cols = 1:ncol(simple.lh), widths = "auto")
 
 # Colour the cells
 conditionalFormatting(wb, "fish.life.history", 
@@ -190,7 +190,7 @@ addWorksheet(wb, "synonyms")
 writeData(wb, "synonyms", synonyms, headerStyle = header)
 
 # Set the width of cells to auto
-setColWidths(wb, "synonyms", cols = 1:ncol(synonyms), widths = "auto")
+# setColWidths(wb, "synonyms", cols = 1:ncol(synonyms), widths = "auto")
 
 # Add Sheet 4 - Family common names ----
 addWorksheet(wb, "family.common.names")
@@ -199,7 +199,7 @@ addWorksheet(wb, "family.common.names")
 writeData(wb, "family.common.names", fam.common.names, headerStyle = header)
 
 # Set the width of cells to auto
-setColWidths(wb, "family.common.names", cols = 1:ncol(fam.common.names), widths = "auto")
+# setColWidths(wb, "family.common.names", cols = 1:ncol(fam.common.names), widths = "auto")
 
 # Add Sheet 5 - Lumped common names ----
 addWorksheet(wb, "lumped.common.names")
@@ -208,7 +208,7 @@ addWorksheet(wb, "lumped.common.names")
 writeData(wb, "lumped.common.names", lumped.common.names, headerStyle = header)
 
 # Set the width of cells to auto
-setColWidths(wb, "lumped.common.names", cols = 1:ncol(lumped.common.names), widths = "auto")
+# setColWidths(wb, "lumped.common.names", cols = 1:ncol(lumped.common.names), widths = "auto")
 
 # Show the workbook
 openXL(wb)
