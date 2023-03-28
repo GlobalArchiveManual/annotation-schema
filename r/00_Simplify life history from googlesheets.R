@@ -2,6 +2,25 @@ library(tidyverse)
 library(googlesheets4)
 library(openxlsx)
 
+# designate project-specific cache
+options(gargle_oauth_cache = ".secrets")
+# check the value of the option, if you like
+gargle::gargle_oauth_cache()
+
+googlesheets4::gs4_auth()
+
+list.files(".secrets/")
+
+gs4_deauth()
+
+gs4_auth(
+  cache = ".secrets",
+  email = "brooke.gibbons@marineecology.io"
+)
+
+
+
+
 # Read in sheet from googledrive ----
 url <- "https://docs.google.com/spreadsheets/d/1SMLvR9t8_F-gXapR2EemQMEPSw_bUbPLcXd3lJ5g5Bo/edit#gid=825736197"
 
@@ -24,7 +43,7 @@ maturity <- readRDS("data/maturity.RDS")
 # Make it simpler
 simple.lh <- lh %>%
   dplyr::mutate(Australian.source = "CAAB",
-                Gloabal.source = "FishBase",
+                Global.source = "FishBase",
                 Local.source = "Harvey et al 2020") %>%
   
   dplyr::filter(!is.na(CAAB)) %>%
@@ -42,7 +61,7 @@ simple.lh <- lh %>%
                 Australian.common.name,
                 Marine.region,
                 
-                Gloabal.source,
+                Global.source,
                 FB.code,
                 FB.length.at.maturity.cm,
                 Subfamily,
@@ -213,5 +232,10 @@ writeData(wb, "lumped.common.names", lumped.common.names, headerStyle = header)
 # Show the workbook
 openXL(wb)
 
+Sys.time()
+GlobalArchive::ga.clean.names(Sys.time())
+
+time <- str_remove_all(Sys.time(), "[^[:alnum:] ]")
+
 # Save the workbook
-saveWorkbook(wb, "fish.life.history.xlsx", overwrite = TRUE)
+saveWorkbook(wb, paste("fish.life.history", time, ".xlsx"), overwrite = TRUE)
