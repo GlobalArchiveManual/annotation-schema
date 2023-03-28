@@ -18,9 +18,6 @@ gs4_auth(
   email = "brooke.gibbons@marineecology.io"
 )
 
-
-
-
 # Read in sheet from googledrive ----
 url <- "https://docs.google.com/spreadsheets/d/1SMLvR9t8_F-gXapR2EemQMEPSw_bUbPLcXd3lJ5g5Bo/edit#gid=825736197"
 
@@ -232,10 +229,11 @@ writeData(wb, "lumped.common.names", lumped.common.names, headerStyle = header)
 # Show the workbook
 openXL(wb)
 
-Sys.time()
-GlobalArchive::ga.clean.names(Sys.time())
+time <- str_remove_all(Sys.time(), "[^[:alnum:] ]") # remove spaces for Nik
+glimpse(time)
 
-time <- str_remove_all(Sys.time(), "[^[:alnum:] ]")
+date <- str_sub(time, 1, 8)
+hour <- str_sub(time, 10, 15)
 
 # Save the workbook
-saveWorkbook(wb, paste("fish.life.history", time, ".xlsx"), overwrite = TRUE)
+saveWorkbook(wb, paste("output/fish/fish.life.history", date, hour, "xlsx", sep = "."), overwrite = TRUE)

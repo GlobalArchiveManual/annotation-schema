@@ -32,3 +32,12 @@ unique(catami$level_3)
 url <- "https://docs.google.com/spreadsheets/d/1tcvHnD8LtPmjro8eOMdOS6k6HKdND86mMAOk6AS_gfc/edit#gid=1972721984"
 
 write_sheet(catami, ss = url, sheet = "code crosswalk")
+
+time <- str_remove_all(Sys.time(), "[^[:alnum:] ]") # remove spaces for Nik
+glimpse(time)
+
+date <- str_sub(time, 1, 8)
+hour <- str_sub(time, 10, 15)
+
+# Save the csv
+write.csv(catami, paste("output/habitat/benthic.annotation.schema.forward.facing", date, hour, "csv", sep = "."), row.names = FALSE, na = "")
