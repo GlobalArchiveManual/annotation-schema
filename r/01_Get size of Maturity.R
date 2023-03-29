@@ -12,7 +12,7 @@ synonyms <- readRDS("data/synonyms.RDS") %>%
   distinct(genus, species, genus_correct, species_correct)
 
 # Validate scientific names to use in fishbase package ----
-validated <- validate_names(simple.lh$`Scientific name`)
+validated <- validate_names(simple.lh$scientific.name)
 
 codes <- common_names(validated) %>%
   ga.clean.names() %>%

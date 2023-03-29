@@ -8,15 +8,15 @@ options(gargle_oauth_cache = ".secrets")
 gargle::gargle_oauth_cache()
 
 googlesheets4::gs4_auth()
-
-list.files(".secrets/")
-
-gs4_deauth()
-
-gs4_auth(
-  cache = ".secrets",
-  email = "brooke.gibbons@marineecology.io"
-)
+# 
+# list.files(".secrets/")
+# 
+# gs4_deauth()
+# 
+# gs4_auth(
+#   cache = ".secrets",
+#   email = "brooke.gibbons@marineecology.io"
+# )
 
 # Read in sheet from googledrive ----
 url <- "https://docs.google.com/spreadsheets/d/1SMLvR9t8_F-gXapR2EemQMEPSw_bUbPLcXd3lJ5g5Bo/edit#gid=825736197"
@@ -26,7 +26,7 @@ lh <- read_sheet(url)
 
 saveRDS(lh, "data/life.history.RDS")
 
-synonyms <- read_sheet(url, sheet = 2)
+synonyms <- read_sheet(url, sheet = 2) %>% distinct()
 saveRDS(synonyms, "data/synonyms.RDS")
 
 fam.common.names <- read_sheet(url, sheet = 3)
@@ -45,7 +45,7 @@ simple.lh <- lh %>%
   
   dplyr::filter(!is.na(CAAB)) %>%
   
-  full_join(maturity) %>%
+  left_join(maturity) %>%
   
   dplyr::select(c(Australian.source,
                 CAAB,
