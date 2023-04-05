@@ -71,7 +71,8 @@ tm <- catami %>%
   dplyr::mutate(qualifiers = strsplit(as.character(qualifiers), split = "/")) %>% # Create a new row for every qualifier - step 1
   unnest(qualifiers) %>% # Create a new row for every qualifier - step 2
   mutate_all(na_if, "") %>%
-  mutate_all(na_if, " ") 
+  mutate_all(na_if, " ") %>%
+  dplyr::filter(!CAAB_code %in% "82003000")
 
 # I think I need to split into a Biota/Substrate and Relief schema to have two caab codes.
 tm.hab <- tm %>%
