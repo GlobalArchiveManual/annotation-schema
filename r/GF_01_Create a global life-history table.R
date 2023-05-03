@@ -108,11 +108,25 @@ worms.final <- worms %>%
   dplyr::rename(scientific = scientificname)
 
 # Get synonyms from worms using AphiaID ----
-Sys.time()
-syn.data <- wm_synonyms_(c(worms.final$aphiaid))
-Sys.time()
+ids.to.use <- unique(worms.final$aphiaid)
 
-syn.tidy <- syn.data %>%
+# Break into chunks of 150
+id.lists <- split(ids.to.use, ceiling(seq_along(species.to.use)/150)) # 234 lists
+
+syns <- data.frame()
+
+# Time to run all = 11:35:07 - (i think it should take 25 minutes)
+for(id in seq(1:length(id.lists))){
+  
+  dat <- id.lists[id][[1]] #%>% glimpse()
+  temp <- wm_synonyms_(c(dat))
+  
+  temp.syns <- do.call("rbind", temp)
+  syns <- bind_rows(syns, temp.syns)
+  
+}
+
+syn.tidy <- syns %>%
   distinct() %>%
   ga.clean.names() %>%
   dplyr::select(scientificname, unacceptreason, valid_aphiaid, valid_name, match_type) %>%
