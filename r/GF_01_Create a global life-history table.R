@@ -114,20 +114,20 @@ worms.final <- read.csv("data/worms.list.csv")
 ids.to.use <- unique(worms.final$aphiaid)
 
 # Break into chunks of 150
-id.lists <- split(ids.to.use, ceiling(seq_along(species.to.use)/150)) # 234 lists
+id.lists <- split(ids.to.use, ceiling(seq_along(ids.to.use)/150))[1:2] # 234 lists
 
 syns <- data.frame()
 
-# Time to run all = 11:35:07 - (i think it should take 25 minutes)
+# 44 seconds per list ~ 171 mins for all lists ~ 3 hours to run
+Sys.time()
 for(id in seq(1:length(id.lists))){
-  
   dat <- id.lists[id][[1]] #%>% glimpse()
   temp <- wm_synonyms_(c(dat))
   
   temp.syns <- do.call("rbind", temp)
   syns <- bind_rows(syns, temp.syns)
-  
 }
+Sys.time()
 
 syn.tidy <- syns %>%
   distinct() %>%
@@ -137,6 +137,10 @@ syn.tidy <- syns %>%
   dplyr::rename(scientific = valid_name, 
                 aphiaid = valid_aphiaid,
                 synonym = scientificname) # TODO Check if I need match_type with more data
+# write.csv(syn.tidy, "data/worms.synonyms.list.csv", row.names = FALSE)
+
+worms.synonyms <- read.csv("data/worms.synonyms.list.csv")
+
 
 
 # TODO need to check that the list of unaccepted names isn't a existing synonym for something else
