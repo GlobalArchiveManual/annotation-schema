@@ -89,23 +89,26 @@ species.lists <- split(species.to.use, ceiling(seq_along(species.to.use)/150)) #
 
 worms <- data.frame()
 
-# Time to run all = 11:35:07 - (i think it should take 25 minutes)
-for(id in seq(1:length(species.lists))){
-  
-  dat <- species.lists[id][[1]] #%>% glimpse()
-  temp <- wm_records_names(c(dat), marine_only = FALSE)
-  
-  temp.worms <- do.call("rbind", temp)
-  
-  worms <- bind_rows(worms, temp.worms)
-  
-}
+# # Time to run = 35 (Have written as a csv to re-read back in to save time, but left the original code to be re-run if needed)
+# for(id in seq(1:length(species.lists))){
+#   
+#   dat <- species.lists[id][[1]] #%>% glimpse()
+#   temp <- wm_records_names(c(dat), marine_only = FALSE)
+#   
+#   temp.worms <- do.call("rbind", temp)
+#   
+#   worms <- bind_rows(worms, temp.worms)
+#   
+# }
+# 
+# worms.final <- worms %>%
+#   distinct() %>%
+#   ga.clean.names() %>%
+#   dplyr::select(aphiaid, scientificname, status, kingdom, phylum, class, order, family, genus, ismarine, isbrackish, isfreshwater) %>%
+#   dplyr::rename(scientific = scientificname)
+# write.csv(worms.final, "data/worms.list.csv", row.names = FALSE)
 
-worms.final <- worms %>%
-  distinct() %>%
-  ga.clean.names() %>%
-  dplyr::select(aphiaid, scientificname, status, kingdom, phylum, class, order, family, genus, ismarine, isbrackish, isfreshwater) %>%
-  dplyr::rename(scientific = scientificname)
+worms.final <- read.csv("data/worms.list.csv")
 
 # Get synonyms from worms using AphiaID ----
 ids.to.use <- unique(worms.final$aphiaid)
