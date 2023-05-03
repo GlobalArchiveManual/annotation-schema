@@ -12,7 +12,7 @@ all.species <- load_taxa() %>%
   dplyr::select(speccode, superclass, class, order, family, genus, species, scientific) %>%
   dplyr::mutate(speccode = as.character(speccode)) 
 
-names(all.species)
+names(all.species) 
 
 # Format basic info ----
 info <- species(all.species$scientific) %>% 
@@ -114,20 +114,17 @@ worms.final <- read.csv("data/worms.list.csv")
 ids.to.use <- unique(worms.final$aphiaid)
 
 # Break into chunks of 150
-id.lists <- split(ids.to.use, ceiling(seq_along(ids.to.use)/150))[1:2] # 234 lists
+id.lists <- split(ids.to.use, ceiling(seq_along(ids.to.use)/150))[1:3] # 234 lists
 
 syns <- data.frame()
 
-# 44 seconds per list ~ 171 mins for all lists ~ 3 hours to run
-Sys.time()
 for(id in seq(1:length(id.lists))){
   dat <- id.lists[id][[1]] #%>% glimpse()
-  temp <- wm_synonyms_(c(dat))
+  temp <- wm_synonyms_(c(dat)) %>%
+    glimpse()
   
-  temp.syns <- do.call("rbind", temp)
-  syns <- bind_rows(syns, temp.syns)
+  syns <- bind_rows(syns, temp)
 }
-Sys.time()
 
 syn.tidy <- syns %>%
   distinct() %>%
@@ -137,11 +134,9 @@ syn.tidy <- syns %>%
   dplyr::rename(scientific = valid_name, 
                 aphiaid = valid_aphiaid,
                 synonym = scientificname) # TODO Check if I need match_type with more data
-# write.csv(syn.tidy, "data/worms.synonyms.list.csv", row.names = FALSE)
 
+write.csv(syn.tidy, "data/worms.synonyms.list.csv", row.names = FALSE)
 worms.synonyms <- read.csv("data/worms.synonyms.list.csv")
-
-
 
 # TODO need to check that the list of unaccepted names isn't a existing synonym for something else
 # Could somehow flag this in CheckEM if there are some e.g. Pagrus auratus is an unaccepted for Sparus aurata Linnaeus, 1758
@@ -156,8 +151,9 @@ species.also.a.synonym <- syn.tidy %>%
 # Get IUCN ranking ----
 # This requires a IUCN API
 # To register for a IUCN API RUN 'rl_use_iucn()' once you have applied and received your API TOKEN then run 'usethis::edit_r_environ()' and add "IUCN_REDLIST_KEY = XXXX" to the r environ
-t <- rl_search("Pagrus auratus")
+rl_citation()
 
+t <- rl_search("Pagrus auratus")
 
 # get all results
 out <- rl_sp(all = TRUE)
@@ -174,6 +170,20 @@ rl_sp_category('EX')
 rl_sp_category('EX', parse = FALSE)
 rl_sp_category_('EX')
 
+
+# Get vulnerability ----
+# Also going to keep body shape and dermersal/pelagic from this function
+fb.vul <- fb_tbl("species") %>%
+  ga.clean.names() %>%
+  dplyr::select(speccode, genus, species, vulnerability, bodyshapei, demerspelag) %>%
+  dplyr::mutate(speccode = as.character(speccode)) 
+
+names(fb.vul) %>% sort()
+
+unique(fb.vul$bodyshapei)
+unique(fb.vul$demerspelag)
+
+
 # Final life history sheet should have ----
 # - Y Scientific name
 # - Y Class, Order, Family, Genus, Species
@@ -181,7 +191,7 @@ rl_sp_category_('EX')
 # - Y Regions were present
 # - Length-weight 
 # - Vulnerability
-# - EPBC threat status
+# - IUCN threat status
 # - Y Fishing
 # - Y Size at maturity
 
@@ -192,7 +202,8 @@ fblh <- all.species %>%
   full_join(info) %>%
   full_join(distribution) %>%
   full_join(maturity) %>%
-  full_join((worms.final))#%>%
+  full_join((worms.final)) %>%
+  full_join(fb.vul)#%>%
   #full_join(lwr)
 
 test <- fblh %>%
