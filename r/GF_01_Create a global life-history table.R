@@ -3,6 +3,7 @@ library(tidyverse)
 library(GlobalArchive) # TODO add how to install 
 library(worrms)
 library(rredlist)
+library(openxlsx)
 
 # Get a list of all fish species in the world from fishbase ----
 all.species <- load_taxa() %>% 
@@ -11,8 +12,6 @@ all.species <- load_taxa() %>%
   tidyr::separate(species, into = c("genus", "species"), sep = " ") %>%
   dplyr::select(speccode, superclass, class, order, family, genus, species, scientific) %>%
   dplyr::mutate(speccode = as.character(speccode)) 
-
-names(all.species) 
 
 # Format basic info ----
 info <- species(all.species$scientific) %>% 
@@ -77,17 +76,17 @@ synonyms <- synonyms(all.species$scientific) %>%
 
 unique(synonyms$status)
 
-# Get worms code ----
-# The wm_records_names function can only handle 170 names at a time (have chopped in 150 chunks as it is an easier number)
-# 150 names takes around ~ 6 seconds to run
-
-# Create a list of all species
-species.to.use <- unique(all.species$scientific)
-
-# Break into chunks of 150
-species.lists <- split(species.to.use, ceiling(seq_along(species.to.use)/150)) # 234 lists
-
-worms <- data.frame()
+## Get worms code ----
+## The wm_records_names function can only handle 170 names at a time (have chopped in 150 chunks as it is an easier number)
+## 150 names takes around ~ 6 seconds to run
+# 
+# # Create a list of all species
+# species.to.use <- unique(all.species$scientific)
+# 
+# # Break into chunks of 150
+# species.lists <- split(species.to.use, ceiling(seq_along(species.to.use)/150)) # 234 lists
+# 
+# worms <- data.frame()
 
 # # Time to run = 35 (Have written as a csv to re-read back in to save time, but left the original code to be re-run if needed)
 # for(id in seq(1:length(species.lists))){
@@ -107,41 +106,92 @@ worms <- data.frame()
 #   dplyr::select(aphiaid, scientificname, status, kingdom, phylum, class, order, family, genus, ismarine, isbrackish, isfreshwater) %>%
 #   dplyr::rename(scientific = scientificname)
 # write.csv(worms.final, "data/worms.list.csv", row.names = FALSE)
+# 
+# worms.final <- read.csv("data/worms.list.csv")%>%
+#   filter(!is.na(scientific)) %>%
+#   filter(status == "accepted")
+# 
+# simple.worms <- worms.final %>%
+#   dplyr::select(-c(ismarine, isbrackish, isfreshwater))
+# 
+# missing.some.info <- (simple.worms[!complete.cases(simple.worms), ])
+# species.to.use <- unique(missing.some.info$scientific)
+# 
+# # Break into chunks of 150
+# species.lists <- split(species.to.use, ceiling(seq_along(species.to.use)/150)) # only 6 lists this time
+# missing.worms <- data.frame()
+# 
+# for(id in seq(1:length(species.lists))){
+#   dat <- species.lists[id][[1]] #%>% glimpse()
+#   temp <- wm_records_names(c(dat), marine_only = FALSE)
+#   temp.worms <- do.call("rbind", temp)
+#   missing.worms <- bind_rows(missing.worms, temp.worms)
+# }
+# 
+# new.worms <- missing.worms %>%
+#   distinct() %>%
+#   ga.clean.names() %>%
+#   dplyr::select(aphiaid, scientificname, status, kingdom, phylum, class, order, family, genus, ismarine, isbrackish, isfreshwater) %>%
+#   dplyr::rename(scientific = scientificname) %>%
+#   filter(status == "accepted") %>%
+#   filter(!is.na(family)) 
+# 
+# all.worms <- worms.final %>%
+#   filter(!is.na(family)) %>%
+#   bind_rows(new.worms) %>%
+#   filter(status == "accepted")
 
-worms.final <- read.csv("data/worms.list.csv")
+# simple.worms <- all.worms %>%
+#   dplyr::select(-c(ismarine, isbrackish, isfreshwater))
+# 
+# test.for.nas <- (simple.worms[!complete.cases(simple.worms), ])
 
-# Get synonyms from worms using AphiaID ----
-ids.to.use <- unique(worms.final$aphiaid)
+# write.csv(all.worms, "data/worms.list.csv", row.names = FALSE)
+all.worms <- read.csv("data/worms.list.csv") %>%
+  group_by(scientific) %>% 
+  slice(1) %>% # WORMS has duplicate rows but different AphiaIDs for some species e.g. Anabarilius liui (1007204 & 1012093)
+  ungroup()
 
-# Break into chunks of 150
-id.lists <- split(ids.to.use, ceiling(seq_along(ids.to.use)/150))[1:3] # 234 lists
+# duplicates <- all.worms %>% 
+#   group_by(scientific) %>%
+#   summarise(n = n()) %>%
+#   filter(n > 1) # No duplicates!
 
-syns <- data.frame()
-
-for(id in seq(1:length(id.lists))){
-  dat <- id.lists[id][[1]] #%>% glimpse()
-  temp <- wm_synonyms_(c(dat)) %>%
-    glimpse()
-  
-  syns <- bind_rows(syns, temp)
-}
-
-syn.tidy <- syns %>%
-  distinct() %>%
-  ga.clean.names() %>%
-  dplyr::select(scientificname, unacceptreason, valid_aphiaid, valid_name, match_type) %>%
-  dplyr::filter(!scientificname == valid_name) %>% # a check to make sure the valid name isn't the same as the synonym
-  dplyr::rename(scientific = valid_name, 
-                aphiaid = valid_aphiaid,
-                synonym = scientificname) # TODO Check if I need match_type with more data
-
-write.csv(syn.tidy, "data/worms.synonyms.list.csv", row.names = FALSE)
+# # Get synonyms from worms using AphiaID ----
+# ids.to.use <- unique(all.worms$aphiaid)
+# 
+# # Break into chunks of 150
+# id.lists <- split(ids.to.use, ceiling(seq_along(ids.to.use)/150))[1:3] # 234 lists
+# 
+# syns <- data.frame()
+# 
+# for(id in seq(1:length(id.lists))){
+#   dat <- id.lists[id][[1]] #%>% glimpse()
+#   temp <- wm_synonyms_(c(dat)) %>%
+#     glimpse()
+#   
+#   syns <- bind_rows(syns, temp)
+# }
+# 
+# syn.tidy <- syns %>%
+#   distinct() %>%
+#   ga.clean.names() %>%
+#   dplyr::select(scientificname, unacceptreason, valid_aphiaid, valid_name, match_type) %>%
+#   dplyr::filter(!scientificname == valid_name) %>% # a check to make sure the valid name isn't the same as the synonym
+#   dplyr::rename(scientific = valid_name, 
+#                 aphiaid = valid_aphiaid,
+#                 synonym = scientificname) # TODO Check if I need match_type with more data
+# 
+# write.csv(syn.tidy, "data/worms.synonyms.list.csv", row.names = FALSE)
 worms.synonyms <- read.csv("data/worms.synonyms.list.csv")
+
+list.for.checking <- worms.synonyms %>%
+  rename(correct.name = scientific, scientific = synonym)
 
 # TODO need to check that the list of unaccepted names isn't a existing synonym for something else
 # Could somehow flag this in CheckEM if there are some e.g. Pagrus auratus is an unaccepted for Sparus aurata Linnaeus, 1758
 # Another example is Alectis indica (Rüppell, 1830) (accepted name), but Alectis indica is also a synonym for Alectis ciliaris (Bloch, 1787).
-species.also.a.synonym <- syn.tidy %>%
+species.also.a.synonym <- worms.synonyms %>%
   dplyr::rename(correct_name = scientific,
                 scientific = synonym) %>%
   dplyr::select(correct_name, scientific) %>%
@@ -180,9 +230,8 @@ fb.vul <- fb_tbl("species") %>%
 
 names(fb.vul) %>% sort()
 
-unique(fb.vul$bodyshapei)
+unique(fb.vul$bodyshapei) # TODO make body shape uniform
 unique(fb.vul$demerspelag)
-
 
 # Final life history sheet should have ----
 # - Y Scientific name
@@ -190,23 +239,154 @@ unique(fb.vul$demerspelag)
 # - Y Common name
 # - Y Regions were present
 # - Length-weight 
-# - Vulnerability
+# - Y Vulnerability
 # - IUCN threat status
 # - Y Fishing
 # - Y Size at maturity
 
 # And a Synonym list
 
-fblh <- all.species %>%
-  dplyr::select(-c(superclass, class, order)) %>%
-  full_join(info) %>%
-  full_join(distribution) %>%
-  full_join(maturity) %>%
-  full_join((worms.final)) %>%
-  full_join(fb.vul)#%>%
+fblh <- all.species %>% # has 35,024 species
+  dplyr::select(-c(superclass, class, order, family)) %>%
+  full_join(info) %>% # has 35,024 species
+  full_join(distribution) %>% # has 34,850 species (less)
+  full_join(maturity) %>% # only available for 1913 species (much less)
+  full_join((all.worms)) %>% # Has 103 missing # the join increases the number of rows WHY?  # TODO
+  full_join(fb.vul) %>%
+  dplyr::select(-speccode)
   #full_join(lwr)
 
-test <- fblh %>%
-  filter(is.na(aphiaid))
+# species.missing.distribution <- anti_join(all.species, distribution) #  174 missing distribution
+# species.missing.maturity <- anti_join(all.species, maturity) #  33,111 missing maturity
 
+# FISHBASE HAS SOME VALID NAMES THAT ARE SYNONYMS HECK
+# TODO once the worms synyonms have finished running - need to check which species are synonyms 
+# (this will be confusing because I will also need to know which ones aren't ambiguous synonyms
+species.missing.worms <- anti_join(all.species %>% dplyr::select(-c(superclass, class, order, family)), all.worms) # only 109
+are.they.valid <- validate_names(c(species.missing.worms$scientific))
 
+are.they.synonyms <- left_join(species.missing.worms, list.for.checking) %>%
+  filter(!is.na(correct.name))
+
+# Have found 24 that could be synonyms
+# Need to check if these species exist in the data before though.
+do.they.exist <- all.species %>%
+  filter(scientific %in% c(unique(are.they.synonyms$correct.name)))
+# 20 are already in the fishbase data - this is very confusing.
+
+# I think it is best to remove these species
+
+worms.missing.fishbase <- anti_join(all.worms, all.species %>% dplyr::select(-c(superclass, class, order, family))) # None - woo
+
+# Save information as an excel workbook ----
+# Define styles for excel
+# TODO update this for global context (FishBase, WORMS or IUCN)
+fb = createStyle(fontColour = "black", bgFill = "#d4a8f0")
+worms = createStyle(fontColour = "black", bgFill = "#a8cdf0")
+iucn = createStyle(fontColour = "black", bgFill = "#f0a8a8")
+
+# Create new workbook
+wb = createWorkbook(title = "global.fish.life.history")
+
+# Add Sheet 1 - Information -----
+addWorksheet(wb, "information")
+
+# Create the info data 
+info <- data.frame(Source = c("FishBase", "WORMS", "IUCN red list"),
+                   Package = c("rfishbase", "worrms", "rredlist"),
+                   Citation = c("X", "X", "X"),
+                   Information = c("X", "X", "X"),
+                   Comments = c("X", "X", "X"))
+# Add the data 
+header = createStyle(textDecoration = "Bold")
+writeData(wb, "information", info, headerStyle = header)
+
+# Colour the cells
+conditionalFormatting(wb, "information", 
+                      cols = 1, 
+                      rows = 1:(nrow(info)+1), 
+                      rule = "FishBase", 
+                      type = "contains",
+                      style = fb)
+
+conditionalFormatting(wb, "information", 
+                      cols = 1, 
+                      rows = 1:(nrow(info)+1), 
+                      rule = "WORMS", 
+                      type = "contains",
+                      style = worms)
+
+conditionalFormatting(wb, "information", 
+                      cols = 1, 
+                      rows = 1:(nrow(info)+1), 
+                      rule = "IUCN red list", 
+                      type = "contains",
+                      style = iucn)
+
+# Add Sheet 2 - fish.life.history ----
+addWorksheet(wb, "lifehistory")
+
+fblh.chop <- fblh %>% slice(5)
+
+# Add the data
+writeData(wb, "lifehistory", fblh, headerStyle = header)
+
+write.csv(fblh, "output/fish/global_fish.life.history.csv", row.names = FALSE)
+
+# # Colour the cells
+# conditionalFormatting(wb, "fish.life.history", 
+#                       cols = 1:10, 
+#                       rows = 1:(nrow(simple.lh)+1), 
+#                       rule= "!=0", 
+#                       style = aus)
+# 
+# conditionalFormatting(wb, "fish.life.history", 
+#                       cols = 1:10, 
+#                       rows = 1:(nrow(simple.lh)+1), 
+#                       rule= "=0", 
+#                       style = aus)
+# 
+# 
+# conditionalFormatting(wb, "fish.life.history", 
+#                       cols = 11:30, 
+#                       rows = 1:(nrow(simple.lh)+1), 
+#                       rule = "!=0", 
+#                       style = global)
+# 
+# 
+# conditionalFormatting(wb, "fish.life.history", 
+#                       cols = 11:30, 
+#                       rows = 1:(nrow(simple.lh)+1), 
+#                       rule = "=0", 
+#                       style = global)
+# 
+# conditionalFormatting(wb, "fish.life.history", 
+#                       cols = 31:47, 
+#                       rows = 1:(nrow(simple.lh)+1), 
+#                       rule = "!=0", 
+#                       style = local)
+# 
+# 
+# conditionalFormatting(wb, "fish.life.history", 
+#                       cols = 31:47, 
+#                       rows = 1:(nrow(simple.lh)+1), 
+#                       rule = "=0", 
+#                       style = local)
+
+# Add Sheet 3 - Synonyms ----
+addWorksheet(wb, "synonyms")
+
+# Add the data 
+writeData(wb, "synonyms", worms.synonyms, headerStyle = header)
+
+# Show the workbook
+openXL(wb)
+
+time <- str_remove_all(Sys.time(), "[^[:alnum:] ]") # remove spaces for Nik
+glimpse(time)
+
+date <- str_sub(time, 1, 8)
+hour <- str_sub(time, 10, 15)
+
+# Save the workbook
+saveWorkbook(wb, paste("output/fish/global_fish.life.history", date, hour, "xlsx", sep = "."), overwrite = TRUE)
