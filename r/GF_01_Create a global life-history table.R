@@ -1,6 +1,7 @@
 library(rfishbase)
 library(tidyverse)
-library(GlobalArchive) # TODO add how to install 
+# devtools::install_github("UWAMEGFisheries/GlobalArchive", dependencies = TRUE)
+library(GlobalArchive)
 library(worrms)
 library(rredlist)
 library(openxlsx)
@@ -13,15 +14,18 @@ all.species <- load_taxa() %>%
   dplyr::select(speccode, superclass, class, order, family, genus, species, scientific) %>%
   dplyr::mutate(speccode = as.character(speccode)) 
 
-# Format basic info ----
+# Format basic info and min + max depths ----
 info <- species(all.species$scientific) %>% 
   ga.clean.names() %>%
   dplyr::rename(length.max = length, length.max.type = ltypemaxm) %>% # Length metrics are in cm
-  dplyr::select(species, speccode, fbname, length.max, length.max.type, importance) %>%
+  dplyr::select(species, speccode, fbname, length.max, length.max.type, importance,
+                depthrangecomdeep, depthrangecomshallow, depthrangedeep,depthrangeshallow) %>%
   dplyr::mutate(speccode = as.character(speccode)) %>%
   dplyr::rename(scientific = species, 
                 common.name = fbname) %>%
   dplyr::mutate(speccode = as.character(speccode)) 
+
+names(info) %>% sort()
 
 # Validate species names ----
 validated <- validate_names(all.species$scientific)
@@ -59,14 +63,46 @@ maturity <- maturity(validated) %>%
   tidyr::separate(species, into = c("genus", "species"), sep = " ") %>%
   dplyr::mutate(speccode = as.character(speccode)) 
   
-
 # Get length-weight relationship
 # TODO come back and make this for only one species
-# I don't think I can get bayesian for every species
 
 lwr <- length_weight(validated) %>%
   ga.clean.names() %>%
   dplyr::mutate(speccode = as.character(speccode))
+
+# bay_lwrs <- data.frame() # turned off for now So i don't loose the data we have already downloaded
+bay_lwrs <- read.csv("data/bayesian_length-weights.csv") %>% distinct()
+
+Sys.time() 
+
+temp.validated <- as.data.frame(validated) %>%
+  filter(!validated %in% c(unique(bay_lwrs$species))) %>%
+  pull(validated)
+
+# started next ones (24799) @ 8:22 AM (estimate 10 AM next day)
+# have length weights for 34671 species, running once more to double check I don't get any extras
+for(species in seq(1:length(unique(temp.validated)))){ 
+  print(species)
+  
+  try(temp_lwr <- find_lw(temp.validated[species]))
+  nrow(temp_lwr)
+  
+  if(!is.null(nrow(temp_lwr))){
+  bay_lwrs <- bind_rows(bay_lwrs, temp_lwr)
+  }
+}
+
+bay_lwrs <- bay_lwrs %>% distinct() %>%
+  dplyr::rename(scientific = species)
+
+Sys.time()
+
+write.csv(bay_lwrs, "data/bayesian_length-weights.csv", row.names = FALSE)
+
+
+test <- bay_lwrs %>%
+  group_by(species) %>% #, lwa_m, lwa_sd, lwb_m, lwb_sd
+  summarise(n= n())
 
 # Get list of synyonms
 synonyms <- synonyms(all.species$scientific) %>% 
@@ -253,8 +289,17 @@ fblh <- all.species %>% # has 35,024 species
   full_join(maturity) %>% # only available for 1913 species (much less)
   full_join((all.worms)) %>% # Has 103 missing # the join increases the number of rows WHY?  # TODO
   full_join(fb.vul) %>%
-  dplyr::select(-speccode)
+  dplyr::select(-speccode) %>%
+  full_join(bay_lwrs)
   #full_join(lwr)
+
+write.csv(fblh, "output/fish/global_fish.life.history.csv")
+write.csv(worms.synonyms, "output/fish/global_fish.synonyms.csv")
+
+
+# Write files for CheckEM
+write.csv(fblh, "output/CheckEM/global_fish.life.history.csv")
+write.csv(worms.synonyms, "output/CheckEM/global_fish.synonyms.csv")
 
 # species.missing.distribution <- anti_join(all.species, distribution) #  174 missing distribution
 # species.missing.maturity <- anti_join(all.species, maturity) #  33,111 missing maturity
@@ -332,6 +377,7 @@ fblh.chop <- fblh %>% slice(5)
 writeData(wb, "lifehistory", fblh, headerStyle = header)
 
 write.csv(fblh, "output/fish/global_fish.life.history.csv", row.names = FALSE)
+write.csv(worms.synonyms, "output/fish/global_fish.synonyms.csv", row.names = FALSE)
 
 # # Colour the cells
 # conditionalFormatting(wb, "fish.life.history", 
