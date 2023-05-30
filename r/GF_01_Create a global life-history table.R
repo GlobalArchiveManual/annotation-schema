@@ -220,9 +220,13 @@ all.worms <- read.csv("data/worms.list.csv") %>%
 # 
 # write.csv(syn.tidy, "data/worms.synonyms.list.csv", row.names = FALSE)
 worms.synonyms <- read.csv("data/worms.synonyms.list.csv") %>%
+  left_join(., all.worms) %>%
   dplyr::select(-c(match_type)) %>% #TODO remove this if i have to run the above code again
   tidyr::separate(scientific, into = c("genus_correct", "species_correct"), sep = " ", extra = "merge", remove = FALSE) %>%
-  tidyr::separate(synonym, into = c("genus", "species"), sep = " ", extra = "merge", remove = FALSE)
+  tidyr::separate(synonym, into = c("genus", "species"), sep = " ", extra = "merge", remove = FALSE) %>%
+  dplyr::select(-c(aphiaid, status, kingdom, phylum, class, order, ismarine, isbrackish, isfreshwater)) %>%
+  dplyr::mutate(family_correct = family)
+  
   
 list.for.checking <- worms.synonyms %>%
   rename(correct.name = scientific, scientific = synonym)
@@ -439,3 +443,4 @@ hour <- str_sub(time, 10, 15)
 
 # Save the workbook
 saveWorkbook(wb, paste("output/fish/global_fish.life.history", date, hour, "xlsx", sep = "."), overwrite = TRUE)
+
