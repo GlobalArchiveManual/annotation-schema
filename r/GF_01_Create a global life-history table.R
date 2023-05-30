@@ -73,31 +73,31 @@ lwr <- length_weight(validated) %>%
 # bay_lwrs <- data.frame() # turned off for now So i don't loose the data we have already downloaded
 bay_lwrs <- read.csv("data/bayesian_length-weights.csv") %>% distinct()
 
-Sys.time() 
+# Sys.time() 
+# 
+# temp.validated <- as.data.frame(validated) %>%
+#   filter(!validated %in% c(unique(bay_lwrs$species))) %>%
+#   pull(validated)
 
-temp.validated <- as.data.frame(validated) %>%
-  filter(!validated %in% c(unique(bay_lwrs$species))) %>%
-  pull(validated)
+# # started next ones (24799) @ 8:22 AM (estimate 10 AM next day)
+# # have length weights for 34671 species, running once more to double check I don't get any extras
+# for(species in seq(1:length(unique(temp.validated)))){ 
+#   print(species)
+#   
+#   try(temp_lwr <- find_lw(temp.validated[species]))
+#   nrow(temp_lwr)
+#   
+#   if(!is.null(nrow(temp_lwr))){
+#   bay_lwrs <- bind_rows(bay_lwrs, temp_lwr)
+#   }
+# }
+# 
+# bay_lwrs <- bay_lwrs %>% distinct() %>%
+#   dplyr::rename(scientific = species)
 
-# started next ones (24799) @ 8:22 AM (estimate 10 AM next day)
-# have length weights for 34671 species, running once more to double check I don't get any extras
-for(species in seq(1:length(unique(temp.validated)))){ 
-  print(species)
-  
-  try(temp_lwr <- find_lw(temp.validated[species]))
-  nrow(temp_lwr)
-  
-  if(!is.null(nrow(temp_lwr))){
-  bay_lwrs <- bind_rows(bay_lwrs, temp_lwr)
-  }
-}
+# Sys.time()
 
-bay_lwrs <- bay_lwrs %>% distinct() %>%
-  dplyr::rename(scientific = species)
-
-Sys.time()
-
-write.csv(bay_lwrs, "data/bayesian_length-weights.csv", row.names = FALSE)
+# write.csv(bay_lwrs, "data/bayesian_length-weights.csv", row.names = FALSE)
 
 
 test <- bay_lwrs %>%
@@ -212,15 +212,18 @@ all.worms <- read.csv("data/worms.list.csv") %>%
 # syn.tidy <- syns %>%
 #   distinct() %>%
 #   ga.clean.names() %>%
-#   dplyr::select(scientificname, unacceptreason, valid_aphiaid, valid_name, match_type) %>%
+#   dplyr::select(scientificname, unacceptreason, valid_aphiaid, valid_name) %>%
 #   dplyr::filter(!scientificname == valid_name) %>% # a check to make sure the valid name isn't the same as the synonym
 #   dplyr::rename(scientific = valid_name, 
 #                 aphiaid = valid_aphiaid,
-#                 synonym = scientificname) # TODO Check if I need match_type with more data
+#                 synonym = scientificname)
 # 
 # write.csv(syn.tidy, "data/worms.synonyms.list.csv", row.names = FALSE)
-worms.synonyms <- read.csv("data/worms.synonyms.list.csv")
-
+worms.synonyms <- read.csv("data/worms.synonyms.list.csv") %>%
+  dplyr::select(-c(match_type)) %>% #TODO remove this if i have to run the above code again
+  tidyr::separate(scientific, into = c("genus_correct", "species_correct"), sep = " ", extra = "merge", remove = FALSE) %>%
+  tidyr::separate(synonym, into = c("genus", "species"), sep = " ", extra = "merge", remove = FALSE)
+  
 list.for.checking <- worms.synonyms %>%
   rename(correct.name = scientific, scientific = synonym)
 
