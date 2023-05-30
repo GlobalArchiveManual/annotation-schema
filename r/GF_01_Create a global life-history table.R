@@ -307,6 +307,7 @@ write.csv(worms.synonyms, "output/fish/global_fish.synonyms.csv")
 # Write files for CheckEM
 write.csv(fblh, "output/CheckEM/global_fish.life.history.csv")
 write.csv(worms.synonyms, "output/CheckEM/global_fish.synonyms.csv")
+write.csv(species.also.a.synonym, "output/CheckEM/global_fish.ambiguous.synonyms.csv")
 
 # species.missing.distribution <- anti_join(all.species, distribution) #  174 missing distribution
 # species.missing.maturity <- anti_join(all.species, maturity) #  33,111 missing maturity
