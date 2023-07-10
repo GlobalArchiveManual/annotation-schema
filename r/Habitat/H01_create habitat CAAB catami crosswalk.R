@@ -18,7 +18,6 @@ googlesheets4::gs4_auth()
 #   email = "brooke.gibbons@marineecology.io"
 # )
 
-
 # Read in extra caab codes ----
 extra <- read.csv("data/extra-caab-codes.csv")
 
@@ -42,9 +41,21 @@ catami <- read.csv("data/catami-caab-codes_1.4.csv") %>%
   dplyr::filter(!level_2 %in% c("Biota", "Physical")) %>%
   dplyr::arrange(level_1, level_2, level_3, level_4) %>%
   dplyr::mutate(CAAB_code = str_pad(CAAB_code, 8, side = c("left"), pad = "0")) %>%
+  
+  # Fix for relief score
+  dplyr::mutate(level_5 =  case_when(level_2 == "Relief" & level_3 == "Flat" ~ as.character(0),
+                                     level_2 == "Relief" & level_3 == "Low / moderate" & level_4 == "Low (<1m)" ~ as.character(1),
+                                     level_2 == "Relief" & level_3 == "Low / moderate" & level_4 == "Moderate (1-3m)" ~ as.character(2),
+                                     level_2 == "Relief" & level_3 == "High" & level_4 == "High (>3m)" ~ as.character(3),
+                                     level_2 == "Relief" & level_3 == "High" & level_4 == "Wall" ~ as.character(4),
+                                     level_2 == "Relief" & level_3 == "High" & level_4 == "Caves" ~ as.character(5)
+                )) %>%
+  
   glimpse()
+  
 
 unique(catami$level_3)
+unique(catami$level_5)
 
 # Write to google sheet
 url <- "https://docs.google.com/spreadsheets/d/1tcvHnD8LtPmjro8eOMdOS6k6HKdND86mMAOk6AS_gfc/edit#gid=1972721984"
