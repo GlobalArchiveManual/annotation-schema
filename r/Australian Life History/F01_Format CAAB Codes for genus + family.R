@@ -96,8 +96,7 @@ polygons <- readRDS("data/distributions_polygons.RDS")
 aus.regions <- st_as_sf(aus.regions)
 temp.with.regions <- data.frame()
 
-Sys.time() # "2023-07-10 15:57:17 +08"
-start.time <- Sys.time()
+# Takes 30 minutes to run ----
 for (CAAB in unique(polygons$SPCODE)) {
 
   polygons.to.test <- polygons %>% filter(SPCODE == CAAB)
@@ -119,7 +118,7 @@ finish.time <- Sys.time()
 
 caab.with.regions <- left_join(temp.with.regions, caab)
 
-# TODO check to see if there are any that are missing labels
+# none missing
 missing <- caab.with.regions %>%
   filter(is.na(marine.region))
 
