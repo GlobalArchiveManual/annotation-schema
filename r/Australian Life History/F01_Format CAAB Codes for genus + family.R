@@ -24,7 +24,8 @@ caab <- caab.og %>%
   dplyr::filter(!is.na(parent_id)) %>%
   dplyr::filter(!stringr::str_detect(scientific_name, "non-current code")) %>%
   replace_na(list(genus = "Unknown", species = "spp")) %>%
-  dplyr::select(spcode, kingdom, phylum, class, family, genus, species)
+  dplyr::select(spcode, kingdom, phylum, class, family, genus, species, common_name, order_name) %>%
+  dplyr::rename(order = order_name)
   
 names(caab)
 
@@ -96,26 +97,23 @@ polygons <- readRDS("data/distributions_polygons.RDS")
 aus.regions <- st_as_sf(aus.regions)
 temp.with.regions <- data.frame()
 
-# Takes 30 minutes to run ----
-for (CAAB in unique(polygons$SPCODE)) {
-
-  polygons.to.test <- polygons %>% filter(SPCODE == CAAB)
-  
-  dat <- aus.regions %>%
-    dplyr::slice(st_intersects(polygons.to.test, aus.regions)[[1]]) %>%
-    st_set_geometry(NULL) %>%
-    dplyr::distinct(Label) %>%
-    dplyr::summarise(marine.region = toString(Label)) %>%
-    dplyr::mutate(spcode = CAAB) 
-  
-  temp.with.regions <- bind_rows(temp.with.regions, dat)
-}
-
-saveRDS(temp.with.regions, "data/temp.with.regions.RDS") # SAVE because i will run this over night and don't want to loose data
-
-Sys.time()
-finish.time <- Sys.time()
-
+# # Takes 30 minutes to run ----
+# for (CAAB in unique(polygons$SPCODE)) {
+# 
+#   polygons.to.test <- polygons %>% filter(SPCODE == CAAB)
+#   
+#   dat <- aus.regions %>%
+#     dplyr::slice(st_intersects(polygons.to.test, aus.regions)[[1]]) %>%
+#     st_set_geometry(NULL) %>%
+#     dplyr::distinct(Label) %>%
+#     dplyr::summarise(marine.region = toString(Label)) %>%
+#     dplyr::mutate(spcode = CAAB) 
+#   
+#   temp.with.regions <- bind_rows(temp.with.regions, dat)
+# }
+# 
+# saveRDS(temp.with.regions, "data/temp.with.regions.RDS") # SAVE because i will run this over night and don't want to loose data
+temp.with.regions <- readRDS("data/temp.with.regions.RDS") 
 caab.with.regions <- left_join(temp.with.regions, caab)
 
 # none missing
@@ -136,6 +134,8 @@ spp.regions <- caab %>%
   dplyr::left_join(caab)
 
 caab.combined <- dplyr::bind_rows(caab.with.regions, spp.regions) %>%
-  dplyr::rename(caab_code = spcode)
+  dplyr::rename(caab_code = spcode) %>%
+  dplyr::filter(!caab_code %in% c(NA))
 
 saveRDS(caab.combined, "data/caab.with.regions.RDS")
+unique(caab.combined$common_name)
