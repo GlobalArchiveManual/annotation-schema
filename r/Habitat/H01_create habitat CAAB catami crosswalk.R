@@ -51,6 +51,7 @@ catami <- read.csv("data/catami-caab-codes_1.4.csv") %>%
                                      level_2 == "Relief" & level_3 == "High" & level_4 == "Caves" ~ as.character(5)
                 )) %>%
   dplyr::mutate(level_5 = if_else(is.na(new_level_5), level_5, new_level_5)) %>%
+  dplyr::select(-c(new_level_5)) %>%
   glimpse()
   
 
