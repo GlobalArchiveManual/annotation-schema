@@ -43,14 +43,14 @@ catami <- read.csv("data/catami-caab-codes_1.4.csv") %>%
   dplyr::mutate(CAAB_code = str_pad(CAAB_code, 8, side = c("left"), pad = "0")) %>%
   
   # Fix for relief score
-  dplyr::mutate(level_5 =  case_when(level_2 == "Relief" & level_3 == "Flat" ~ as.character(0),
+  dplyr::mutate(new_level_5 =  case_when(level_2 == "Relief" & level_3 == "Flat" ~ as.character(0),
                                      level_2 == "Relief" & level_3 == "Low / moderate" & level_4 == "Low (<1m)" ~ as.character(1),
                                      level_2 == "Relief" & level_3 == "Low / moderate" & level_4 == "Moderate (1-3m)" ~ as.character(2),
                                      level_2 == "Relief" & level_3 == "High" & level_4 == "High (>3m)" ~ as.character(3),
                                      level_2 == "Relief" & level_3 == "High" & level_4 == "Wall" ~ as.character(4),
                                      level_2 == "Relief" & level_3 == "High" & level_4 == "Caves" ~ as.character(5)
                 )) %>%
-  
+  dplyr::mutate(level_5 = if_else(is.na(new_level_5), level_5, new_level_5)) %>%
   glimpse()
   
 
