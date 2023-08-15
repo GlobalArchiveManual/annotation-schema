@@ -1,9 +1,9 @@
 library(tidyverse)
 
-extras <- data.frame(FAMILY = c("Unknown", "Larval", "SUS", "Baitfish"),
-                     GENUS = c("Unknown", "Larval", "SUS", "Baitfish"),
-                     SPECIES = c("Unknown", "Larval", "SUS", "Baitfish"),
-                     'CAAB CODE' = c("0", "1", "2", "3")) %>%
+extras <- data.frame(FAMILY = c("Unknown", "Larval", "SUS", "Baitfish", "Sparidae"),
+                     GENUS = c("Unknown", "Larval", "SUS", "Baitfish", "Dentex"),
+                     SPECIES = c("Unknown", "Larval", "SUS", "Baitfish", "carpenteri"),
+                     'CAAB CODE' = c("0", "1", "2", "3", "4")) %>%
   dplyr::rename("CAAB CODE" = CAAB.CODE)
 
 lh <- readRDS("data/simple.life.history.RDS") 
