@@ -9,223 +9,365 @@ library(mregions)
 library(worrms)
 library(sf)
 library(beepr)
+library(taxize)
+sf_use_s2(FALSE)
 
-categories <- read_csv("data/caab_categories.csv") %>%
+# Function to standardize column names and types
+standardize_tibble <- function(tibble) {
+  if (nrow(tibble) > 0) {
+    # Rename columns to consistent names
+    colnames(tibble) <- c("aphiaid", "scientific_name", "authority", "status")
+    # Convert column types if needed
+    tibble$scientific_name <- as.character(tibble$scientific_name)
+    return(tibble)
+  }
+  return(NULL)  # Return NULL for empty tibbles
+}
+
+# Function to check if a string contains any special characters
+has_special_characters <- function(string) {
+  any(str_detect(string, "[^[:alnum:]]"))
+}
+
+# Spatial files ----
+wgs.84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+
+aus.regions <- st_read("data/spatial/marine_regions.shp") %>%
+  dplyr::select(-c(OBJECTID))
+
+aus.regions$region <- as.character(aus.regions$REGION)
+st_crs(aus.regions) <- wgs.84
+aus.regions <- st_as_sf(aus.regions)
+
+caab <- read_excel("data/caab_dump_latest.xlsx") %>%
   ga.clean.names() %>%
-  dplyr::filter(include == "Yes")
+  dplyr::filter(kingdom %in% "Animalia") %>%
+  dplyr::filter(phylum %in% c("Mollusca",
+                              "Chordata",
+                              "Arthropoda",
+                              "Echinodermata")) %>%
+  dplyr::filter(rank %in% "Species") %>%
+  dplyr::filter(!non_current_flag %in% c("Y", "T")) %>%
+  dplyr::filter(!class %in% c("Teleostei", # remove fish as have other list
+                              "Chondrostei", # remove fish
+                              "Cladistii", # remove fish
+                              "Coelacanthi", # remove fish
+                              "Holocephali", # remove fish
+                              "Holostei", # remove fish
+                              "Elasmobranchii", # remove sharks
+                              "Myxini", # remove fish
+                              "Anthozoa", # remove sea anemones and corals - need to talk to Tim
+                              "Appendicularia", # remove free swimming tunicates
+                              "Ascidiacea", # ascidians
+                              "Branchiopoda", # small freshwater shrimps
+                              "Cnidaria incertae sedis", # unknown
+                              "Mollusca incertae sedis", # unknown
+                              "Copepoda",
+                              "Crinoidea", # crinoids
+                              "Hydrozoa",
+                              "Ostracoda", # tiny seed shrimp
+                              "Symphyla",
+                              "Pauropoda",
+                              "Cephalocarida",
+                              "Diplopoda",
+                              "Remipedia",
+                              "Tantulocarida",
+                              "Chilopoda",
+                              "Ichthyostraca",
+                              "Thaliacea",
+                              "Caudofoveata",
+                              "Solenogastres",
+                              "Scaphopoda",
+                              "Maxillopoda",
+                              "Actinopterygii", # fish
+                              "Cephalaspidomorphi", #fish
+                              "Sarcopterygii", # fish
+                              "", NA)) %>%
+  dplyr::rename(caab = spcode, order = order_name) %>%
+  dplyr::select(caab, kingdom, phylum, class, order, family, scientific_name, common_name)
 
-# # Retrieve records for categories that have less than 1000 species ----
-# less.1000 <- categories %>%
-#   dplyr::filter(less.than.1000 == TRUE)
-# 
-# caab <- data.frame()
-# 
-# for (cat in unique(less.1000$category_code)) {
-#   
-#   print(cat)
-#   
-#   # URL to fetch JSON data
-#   url <- paste0("https://www.cmar.csiro.au/data/services/caab/index.cfm?q=&cat=", cat, "&type=scientific&type=vernacular&type=synonym")
-#   
-#   # Fetch the data from the URL
-#   response <- GET(url)
-#   
-#   # Check if the request was successful
-#   if (http_status(response)$category == "Success") {
-#     # Parse JSON content
-#     data <- fromJSON(rawToChar(response$content))
-#     
-#     # Convert the list to a dataframe
-#     df <- as.data.frame(data) %>%
-#       mutate(across(everything(), as.character))
-#     
-#     caab <- bind_rows(caab, df)
-#     
-#     # Now, you have your dataframe (df) with the JSON data
-#     # You can explore the dataframe using functions like head(), str(), etc.
-#   } else {
-#     cat("Failed to fetch data. Status code:", http_status(response)$status_code, "\n")
-#   }
-#   
-# }
-# 
-# # Retrieve records for categories that have more than 1000 species ----
-# more.1000 <- categories %>%
-#   dplyr::filter(!less.than.1000 == TRUE)
-# 
-# # Need to get unique genus for those species ----
-# caab.cat.with.genus <- read_excel("data/caab_dump_latest.xlsx") %>%
-#   ga.clean.names() %>%
-#   dplyr::mutate(cat = str_sub(spcode, 1, 2)) %>%
-#   dplyr::distinct(cat, genus) %>%
-#   dplyr::filter(!is.na(genus)) %>%
-#   dplyr::filter(!is.na(cat)) %>%
-#   dplyr::filter(cat %in% unique(more.1000$category_code)) %>%
-#   dplyr::filter(!genus %in% c("Australoecia", "Brachycalanus", "Propontocypris")) # belong to two categories
+unique(caab$kingdom)
+unique(caab$phylum)
+unique(caab$class)
 
-# unique(caab.cat.with.genus$genus)
-# 
-# test <- caab.cat.with.genus %>%
-#   dplyr::group_by(genus) %>%
-#   summarise(n = n())
-# 
-# 
-# Sys.time() # 30 seconds to do 100 8359/100*30/60 # should take ~ 42 minutes??
-# # "2023-08-03 11:54:45 +08"
-# # ETA = 12:30ish
-# for (unique.genus in unique(caab.cat.with.genus$genus)) {
-#   
-#   # print(unique.genus)
-#   
-#   cat <- caab.cat.with.genus %>%
-#     dplyr::filter(genus %in% unique.genus) %>%
-#     distinct(cat)
-#   
-#   unique.cat <- unique(cat$cat) #%>%
-#      #glimpse()
-#   
-#   # URL to fetch JSON data
-#   url <- paste0("https://www.cmar.csiro.au/data/services/caab/index.cfm?q=", genus, "&cat=", unique.cat, "&type=scientific&type=vernacular&type=synonym")
-#   
-#   # Fetch the data from the URL
-#   response <- GET(url)
-#   
-#   try(
-#   # Check if the request was successful
-#   if (http_status(response)$category == "Success") {
-#     # Parse JSON content
-#     data <- fromJSON(rawToChar(response$content))
-#     
-#     # Convert the list to a dataframe
-#     df <- as.data.frame(data) %>%
-#       mutate(across(everything(), as.character))
-#     
-#     caab <- bind_rows(caab, df)
-#     
-#     # Now, you have your dataframe (df) with the JSON data
-#     # You can explore the dataframe using functions like head(), str(), etc.
-#   } else {
-#     cat("Failed to fetch data. Status code:", http_status(response)$status_code, "\n")
-#   }
-#   )
-#   
-# }
-# 
-# # Trying crustaceans again
-# # URL to fetch JSON data
-#   url <- paste0("https://www.cmar.csiro.au/data/services/caab/index.cfm?q=&cat=28&type=scientific&type=vernacular&type=synonym")
-# 
-#   # Fetch the data from the URL
-#   response <- GET(url)
-# 
-#   # Check if the request was successful
-#   if (http_status(response)$category == "Success") {
-#     # Parse JSON content
-#     data <- fromJSON(rawToChar(response$content))
-# 
-#     # Convert the list to a dataframe
-#     df <- as.data.frame(data) %>%
-#       mutate(across(everything(), as.character))
-# 
-#     caab <- bind_rows(caab, df)
-# 
-#     # Now, you have your dataframe (df) with the JSON data
-#     # You can explore the dataframe using functions like head(), str(), etc.
-#   } else {
-#     cat("Failed to fetch data. Status code:", http_status(response)$status_code, "\n")
-#   }
-# 
-# 
-# 
-# Sys.time()
+duplicates <- caab %>%
+  dplyr::group_by(scientific_name) %>%
+  dplyr::summarise(n = n()) %>%
+  dplyr::filter(n >1)
 
-# write_rds(caab, "data/caab_animals_scraped.RDS")
-caab <- readRDS("data/caab_animals_scraped.RDS")
+caab <- caab %>%
+  filter(!scientific_name %in% duplicates$scientific_name)
 
-clean.caab <- caab %>%
+# Create a list of unique species to get AphiaIDs ----
+species <- unique(caab$scientific_name) %>% sort()
+
+# Get AphiaIDs using taxize package ----
+# takes just under 3 hours to run - unhash to run again
+# system.time({ aphia_ids_list <- get_wormsid_(c(species), fuzzy = FALSE) })
+# write_rds(aphia_ids_list, "data/aphia_ids_list.RDS")
+
+aphia_ids_list <- readRDS("data/aphia_ids_list.RDS")
+
+# remove tibbles that are null
+aphia_ids_list <- aphia_ids_list[!sapply(aphia_ids_list, is.null)]
+
+# Apply the standardization function to each tibble in the list
+standardized_names <- map(aphia_ids_list, standardize_tibble)
+
+# Combine the standardized tibbles into a single dataframe
+aphia_ids <- bind_rows(standardized_names)
+
+duplicates_ids <- aphia_ids %>%
+  dplyr::group_by(scientific_name) %>%
+  dplyr::summarise(n = n()) %>%
+  dplyr::filter(n >1)
+
+aphia_ids <- aphia_ids %>%
+  filter(!scientific_name %in% duplicates_ids$scientific_name) %>%
+  dplyr::select(aphiaid, scientific_name)
+
+# Combine caab and AphiaIDs
+# TODO figure out why there is double ups
+caab_worms <- left_join(caab, aphia_ids) 
+
+duplicates_caab <- caab_worms %>%
+  dplyr::group_by(caab) %>%
+  dplyr::summarise(n = n()) %>%
+  dplyr::filter(n >1) # all good
+
+write_rds(caab_worms, "data/caab_animals_scraped.RDS")
+
+caab_worms <- readRDS("data/caab_animals_scraped.RDS")
+
+names(caab)
+
+clean_caab <- caab_worms %>%
   ga.clean.names() %>%
-  dplyr::select(caab_code, habitat, parent_id, scientificname, kingdom, order, family, vernacularname, scientificnameid_worms, class, scientificnameid_afd, caab_status) %>%
-  dplyr::filter(!parent_id %in% c("", NA, NULL)) %>%
-  tidyr::separate(scientificname, into = c("genus", "species"), extra = "merge") %>%
+  dplyr::filter(!class %in% c("Tentaculata", "Nuda")) %>%
+  dplyr::filter(!family %in% c("", NA, NULL)) %>%
+  tidyr::separate(scientific_name, into = c("genus", "species"), extra = "merge") %>%
   dplyr::mutate(species = str_replace_all(species, "spp.", "spp")) %>%
-  dplyr::mutate(aphiaid = str_replace_all(scientificnameid_worms, "urn:lsid:marinespecies.org:taxname:", ""))
+  distinct() %>%
+  filter(!apply(across(c(caab, kingdom, phylum, class, family, genus, species), as.character), 1, has_special_characters)) # Remove all rows containing special characters
 
-species.with.id <- clean.caab %>%
-  filter(!aphiaid %in% c(NULL, "", NA)) # a couple thousand don't have an ID
+names(clean_caab)
+unique(clean_caab$class)
+unique(clean_caab$order)
+unique(clean_caab$family)
+unique(clean_caab$genus)
+unique(clean_caab$species)
 
-ids <- unique(species.with.id$aphiaid)[1:100] # TODO run with all data
+species_with_id <- clean_caab %>%
+  filter(!aphiaid %in% c(NULL, "", NA)) 
 
-distributions <- wm_distribution_(id = c(as.numeric(ids))) %>%
-  dplyr::filter(!is.na(higherGeographyID))
+# takes ~ 2 hours to run (unhash to rerun)
+# ids <- unique(species_with_id$aphiaid)
+# 
+# system.time({distributions <- wm_distribution_(id = c(as.numeric(ids))) %>%
+#   dplyr::mutate(mrgid = as.integer(str_replace_all(locationID, "http://marineregions.org/mrgid/", "")))})
+# 
+# saveRDS(distributions, "data/distributions_worms_animals_australia.RDS")
+
+distributions <- readRDS("data/distributions_worms_animals_australia.RDS") %>%
+  distinct()
 
 # Get shapefiles for the marine regions using the mregion package ----
-eez <- mr_shp(key = "MarineRegions:eez") # slow to run
-iho <- mr_shp(key = "MarineRegions:iho") # quick to run
-iho_quad <- mr_shp(key = "MarineRegions:iho_quadrants_20150810") # quick to run
-nations <- mr_shp(key = "MarineRegions:worldcountries_esri_2014") # quick to run
 
-eez_df <- st_set_geometry(eez, NULL) %>%
+realm <- mr_shp(key = "Ecoregions:realm") %>%
+  dplyr::mutate(source = "realm") %>%
+  dplyr::rename(name = realm) %>%
+  dplyr::select(mrgid, name, geometry, source)
+
+date <- mr_shp(key = "MarineRegions:cross_dateline_polygons") %>%
+  dplyr::mutate(source = "dateline") %>%
+  dplyr::select(mrgid, name, geometry, source)
+
+faoreg <- mr_shp(key = "MarineRegions:fao") %>%
+  dplyr::mutate(source = "FAO") %>%
+  dplyr::select(mrgid, name, geometry, source)
+
+tdwg <- mr_shp(key = "TDWG:level4") %>%
+  dplyr::mutate(source = "TDWG") %>%
+  dplyr::rename(name = level_4_na) %>%
+  dplyr::select(mrgid, name, geometry, source) %>%
+  dplyr::filter(!mrgid == 0)
+
+erms <- mr_shp(key = "Europe:europeislands") %>%
+  dplyr::mutate(source = "europe") %>%
+  dplyr::select(mrgid, name, geometry, source) %>%
+  dplyr::filter(!mrgid == 0)
+
+eco <- mr_shp(key = "Ecoregions:ecoregions") %>% # slow to run
+  dplyr::rename(name = ecoregion) %>%
+  dplyr::mutate(source = "eco") %>%
+  dplyr::select(mrgid, name, geometry, source)
+
+eez <- mr_shp(key = "MarineRegions:eez") %>% # slow to run
   dplyr::rename(name = geoname) %>%
-  dplyr::mutate(source = "EEZ") %>%
-  dplyr::select(name, mrgid, source)
+  dplyr::mutate(source = "EEZ")%>%
+  dplyr::select(mrgid, name, geometry, source)
 
-iho_df <- st_set_geometry(iho, NULL) %>%
+eez_iho <- mr_shp(key = "MarineRegions:eez_iho") %>% # very slow to run
+  dplyr::rename(name = marregion) %>%
+  dplyr::mutate(source = "EEZ IHO")%>%
+  dplyr::select(mrgid, name, geometry, source)
+
+iho <- mr_shp(key = "MarineRegions:iho") %>%
   dplyr::mutate(source = "IHO") %>%
-  dplyr::select(name, mrgid, source)
+  dplyr::select(-c(id))%>%
+  dplyr::select(mrgid, name, geometry, source) # quick to run
 
-iho_quad_df <- st_set_geometry(iho_quad, NULL)
+iho_quad <- mr_shp(key = "MarineRegions:iho_quadrants_20150810") # quick to run
 
-iho_q1 <- iho_quad_df %>%
-  dplyr::select(name_1, mrgid_1) %>%
+iho_q1 <- iho_quad %>%
+  dplyr::select(-c(name)) %>%
   dplyr::rename(name = name_1, mrgid = mrgid_1) %>%
   dplyr::mutate(source = "IHO Q1") %>%
-  dplyr::filter(!mrgid == 0)
+  dplyr::filter(!mrgid == 0)%>%
+  dplyr::select(mrgid, name, geometry, source)
 
-iho_q2 <- iho_quad_df %>%
-  dplyr::select(name_2, mrgid_2) %>%
+iho_q2 <- iho_quad %>%
+  dplyr::select(-c(name)) %>%
   dplyr::rename(name = name_2, mrgid = mrgid_2) %>%
   dplyr::mutate(source = "IHO Q2")%>%
-  dplyr::filter(!mrgid == 0)
+  dplyr::filter(!mrgid == 0)%>%
+  dplyr::select(mrgid, name, geometry, source)
 
-iho_q3 <- iho_quad_df %>%
-  dplyr::select(name_3, mrgid_3) %>%
+iho_q3 <- iho_quad %>%
+  dplyr::select(-c(name)) %>%
   dplyr::rename(name = name_3, mrgid = mrgid_3) %>%
   dplyr::mutate(source = "IHO Q1")%>%
-  dplyr::filter(!mrgid == 0)
+  dplyr::filter(!mrgid == 0)%>%
+  dplyr::select(mrgid, name, geometry, source)
 
-nations_df <- st_set_geometry(nations, NULL) %>%
-  dplyr::mutate(source = "Nations") 
+nations <- mr_shp(key = "MarineRegions:worldcountries_esri_2014") # quick to run
 
-nat_q1 <- nations_df %>%
-  dplyr::select(territory1, mrgid_ter1) %>%
+nat_q1 <- nations %>%
+  # dplyr::select(territory1, mrgid_ter1) %>%
   dplyr::rename(name = territory1, mrgid = mrgid_ter1) %>%
   dplyr::mutate(source = "Nations Q1") %>%
-  dplyr::filter(!mrgid == 0)
+  dplyr::filter(!mrgid == 0)%>%
+  dplyr::select(mrgid, name, geometry, source)
 
-nat_q2 <- nations_df %>%
-  dplyr::select(territory2, mrgid_ter2) %>%
+nat_q2 <- nations %>%
+  # dplyr::select(territory2, mrgid_ter2) %>%
   dplyr::rename(name = territory2, mrgid = mrgid_ter2) %>%
   dplyr::mutate(source = "Nations Q2") %>%
-  dplyr::filter(!mrgid == 0)
+  dplyr::filter(!mrgid == 0)%>%
+  dplyr::select(mrgid, name, geometry, source)
 
-nat_q3 <- nations_df %>%
-  dplyr::select(territory3, mrgid_ter3) %>%
+nat_q3 <- nations %>%
+  # dplyr::select(territory3, mrgid_ter3) %>%
   dplyr::rename(name = territory3, mrgid = mrgid_ter3) %>%
   dplyr::mutate(source = "Nations Q3") %>%
-  dplyr::filter(!mrgid == 0)
+  dplyr::filter(!mrgid == 0)%>%
+  dplyr::select(mrgid, name, geometry, source)
 
-codes <- bind_rows(eez_df, iho_df, iho_q1, iho_q2, iho_q3, nat_q1, nat_q2, nat_q3) %>%
-  dplyr::mutate(mrgid = as.character(mrgid))
+all_polygons <- bind_rows(eez, iho, iho_q1, iho_q2, iho_q3, nat_q1, nat_q2, nat_q3, eez_iho, eco, erms, tdwg, faoreg, realm, date) %>%
+  dplyr::select(mrgid, name, geometry, source)
 
+codes <- st_set_geometry(all_polygons, NULL)
+
+# This is just for me to work out which shapefiles I am missing.
 joined <- distributions %>%
-  dplyr::mutate(mrgid = str_replace_all(locationID, "http://marineregions.org/mrgid/", "")) %>%
-  left_join(codes)
+  left_join(codes) %>%
+  distinct()
 
-missing <- joined %>%
+missing_lower <- joined %>%
   dplyr::filter(is.na(source))
 
-# Save shapefiles as test ----
-# st_write(eez, "data/eez.shp")
-# st_write(iho, "data/iho.shp")
-# st_write(iho_quad, "data/iho_quad.shp")
-# st_write(nations, "data/nations.shp")
+most_common <- missing_lower %>%
+  group_by(locality, locationID, higherGeography, higherGeographyID) %>%
+  dplyr::summarise(n = n())
+
+# Some are missing that do not have available shapefiles
+# Plan is to then use the higher geography shapefile.
+missing_higher <- joined %>%
+  dplyr::filter(is.na(source)) %>%
+  dplyr::select(-c(mrgid, name, source)) %>%
+  # distinct(locality, locationID, higherGeography, higherGeographyID) %>% # Turn this on to check number of unique combinations
+  dplyr::mutate(mrgid = as.integer(str_replace_all(higherGeographyID, "http://marineregions.org/mrgid/", ""))) %>%
+  left_join(codes) %>%
+  dplyr::filter(is.na(source)) %>%
+  dplyr::distinct(locality, locationID)
+
+# Only very few that are still missing
+# Some have been superseeded, some don't have shapefiles to access easily.
+# Will skip these for now and potentially try and add them back in for the world list?
+
+# Get Australia Marine Regions based off worms distributions
+polygons_with_regions <- data.frame()
+
+# Takes 2 mins to run ----
+Sys.time()
+for (i in 1:nrow(all_polygons)) {
+  
+  polygon_to_test <- all_polygons %>% slice(i)
+  
+  mrgid <- unique(polygon_to_test$mrgid)
+  name <- unique(polygon_to_test$name)
+  
+  try(dat <- aus.regions %>%
+        dplyr::slice(st_intersects(polygon_to_test, aus.regions)[[1]]) %>%
+        st_set_geometry(NULL) %>%
+        dplyr::distinct(Label) %>%
+        dplyr::summarise(marine_region = toString(Label)) %>%
+        dplyr::mutate(mrgid = as.integer(mrgid), name = name))
+  
+  polygons_with_regions <- bind_rows(polygons_with_regions, dat)
+}
+
+# This is a dataframe of which Aus marine regions match the regions in the polygons 
+polygons_tidy <- polygons_with_regions %>%
+  distinct()
+
+# Need to join this info to the distributions
+distributions_lower <- left_join(distributions, polygons_tidy) %>%
+  distinct(id, marine_region) %>%
+  filter(!marine_region %in% c("", NA, NULL)) %>%
+  mutate(marine_region = strsplit(as.character(marine_region), split = ", "))%>% # changed from "/" for old LH
+  unnest(marine_region) %>%
+  distinct() %>%
+  dplyr::group_by(id) %>%
+  dplyr::summarise(marine_region = toString(marine_region)) %>%
+  dplyr::rename(lowest_marine_region = marine_region)
+
+distributions_higher <- distributions %>%
+  dplyr::mutate(mrgid = as.integer(str_replace_all(higherGeographyID, "http://marineregions.org/mrgid/", ""))) %>%
+  left_join(., polygons_tidy) %>%
+  distinct(id, marine_region) %>%
+  filter(!marine_region %in% c("", NA, NULL))%>%
+  mutate(marine_region = strsplit(as.character(marine_region), split = ", "))%>% # changed from "/" for old LH
+  unnest(marine_region) %>%
+  distinct() %>%
+  dplyr::group_by(id) %>%
+  dplyr::summarise(marine_region = toString(marine_region)) %>%
+  dplyr::rename(highest_marine_region = marine_region)
+
+# If lower distribution polygons available those were used, if not the higher geography ones were used
+distributions_aus <- full_join(distributions_lower, distributions_higher) %>%
+  dplyr::mutate(marine_region = if_else(!is.na(lowest_marine_region), lowest_marine_region, highest_marine_region)) %>%
+  dplyr::distinct(id, marine_region) %>%
+  dplyr::rename(aphiaid = id) %>%
+  dplyr::mutate(aphiaid = as.numeric(aphiaid))
+
+# CAAB with distributions ----
+final <- left_join(clean_caab, distributions_aus) %>%
+  dplyr::rename(australian_common_name = common_name) %>%
+  dplyr::mutate(scientific_name = paste(genus, species, sep = " ")) %>%
+  dplyr::select(caab, class, order, family, genus, species, scientific_name, australian_common_name, marine_region) %>%
+  dplyr::mutate(australian_common_name = str_to_sentence(australian_common_name))
+
+number.with.distribtuons <- final %>% filter(!is.na(marine_region))
+6197/17740 # 34% with distribution info available from worms package
+
+# Check with Tim's list of mobile inverts ----
+species.to.check <- read_csv("data/mobile inverts.csv") %>%
+  ga.clean.names() %>%
+  dplyr::mutate(caab = as.numeric(caab))
+
+test.mising <- anti_join(species.to.check, final)
+
+write_rds(final, "data/animals_australia_with_dist.RDS")
+
+final <- readRDS("data/animals_australia_with_dist.RDS")

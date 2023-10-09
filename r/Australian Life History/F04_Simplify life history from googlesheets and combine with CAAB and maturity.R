@@ -62,7 +62,53 @@ keep <- lh %>%
                 MaxLegal.Tas,
                 Bag.Tas,
                 
-                EPBC.Threat.Status)
+                EPBC.Threat.Status) %>%
+  
+  dplyr::rename(family = Family,
+                genus = Genus,
+                species = Species,
+                
+                rls_trophic_level = RLS.trophic.level,
+                rls_trophic_breadth = RLS.trophic.breadth,
+                rls_trophic_group = RLS.trophic.group,
+                rls_water_column = RLS.water.column,
+                rls_substrate_type = RLS.substrate.type,
+                rls_complexity = RLS.complexity,
+                rls_night_day = RLS.night.day,
+                rls_gregariousness = RLS.gregariousness,
+                rls_thermal_niche = RLS.thermal.niche,
+                rls_vulnerability = RLS.vulnerability,
+                
+                fishing_mortality = Fishing.mortality,
+                fishing_type = Fishing.type,
+                fishing_intensity = Fishing.intensity,
+                
+                min_legal_nt = MinLegal.NT,
+                max_legal_nt = MaxLegal.NT,
+                bag_nt = Bag.NT,
+                min_legal_wa = MinLegal.WA,
+                max_legal_wa = MaxLegal.WA,
+                bag_wa = Bag.WA,
+                min_legal_qld = MinLegal.QLD,
+                max_legal_qld = MaxLegal.QLD,
+                bag_qld = Bag.QLD,
+                min_legal_nsw = MinLegal.NSW,
+                max_legal_nsw = MaxLegal.NSW,
+                bag_nsw = Bag.NSW,
+                min_legal_vic = MinLegal.Vic,
+                max_legal_vic = MaxLegal.Vic,
+                bag_vic = Bag.Vic,
+                min_legal_sa = MinLegal.SA,
+                max_legal_sa = MaxLegal.SA,
+                bag_sa = Bag.SA,
+                min_legal_tas = MinLegal.Tas,
+                max_legal_tas = MaxLegal.Tas,
+                bag_tas = Bag.Tas,
+                
+                epbc_threat_status = EPBC.Threat.Status)
+               
+names(keep)
+
 
 # Other data to read in from script 1 & 
 caab.regions <- readRDS("data/caab.with.regions.RDS") %>%
@@ -71,7 +117,7 @@ caab.regions <- readRDS("data/caab.with.regions.RDS") %>%
 
 fishbase <- readRDS("data/fishbase.and.iucn.RDS") %>%
   dplyr::filter(!(caab.scientific %in% "Epigonus macrops" & speccode %in% "14365"))%>%
-  dplyr::mutate(caab_code = as.character(caab_code))
+  dplyr::mutate(caab_code = as.character(caab_code)) 
 
 caab.scraped <- readRDS("data/caab_scraped_codes_common-names.RDS") %>%
   dplyr::mutate(family = str_replace_all(.$family, "[^[:alnum:]]", "")) %>%
@@ -99,98 +145,121 @@ caab.combined <- full_join(caab.regions, caab.scraped) %>%
   dplyr::mutate(common.name = str_replace_all(.$common.name, "\\[|\\]", "")) %>%
   dplyr::filter(!is.na(species))
 
+names(caab.combined)
+
+names(fishbase)
+
+iucn.all <- readRDS("data/iucn.RDS") %>%
+  dplyr::rename(iucn_ranking = category) %>%
+  dplyr::mutate(iucn_ranking = case_when(
+    iucn_ranking %in% "DD" ~ "Data Deficient",
+    iucn_ranking %in% "LC" ~ "Least Concern",
+    iucn_ranking %in% "NT" ~ "Near Threatened",
+    iucn_ranking %in% "VU" ~ "Vulnerable",
+    iucn_ranking %in% "EN" ~ "Endangered",
+    iucn_ranking %in% "CR" ~ "Critically Endangered",
+    iucn_ranking %in% "EW" ~ "Extinct in the Wild",
+    iucn_ranking %in% "EX" ~ "Extinct"
+  )) %>%
+  glimpse()
+
+animals <- readRDS("data/animals_australia_with_dist.RDS") %>%
+  dplyr::mutate(caab = as.character(caab)) %>%
+  left_join(iucn.all) %>%
+  glimpse()
+
+unique(animals$iucn_ranking)
+
 # Make it simpler
 simple.lh <- caab.combined %>%
   dplyr::left_join(fishbase) %>%
-  dplyr::rename(Family = family,
-                Genus = genus,
-                Species = species,
-                CAAB = caab_code,
-                Marine.region = marine.region,
-                Order = order,
-                Class = class,
-                Australian.common.name = common.name,
-                FB.code = speccode,
-                FB.length.at.maturity.cm = fb.length.at.maturity.cm,
-                IUCN.Ranking = IUCN.ranking,
-                Subfamily = subfamily) %>%
+  dplyr::rename(caab = caab_code,
+                marine_region = marine.region,
+                australian_common_name = common.name,
+                fb_code = speccode,
+                fb_length_at_maturity_cm = fb.length.at.maturity.cm,
+                iucn_ranking = IUCN.ranking,
+                fb_length_max = FB.Length_MAX,
+                fb_length_max_type = FB.LTypeMaxM,
+                fb_vulnerability = FB.Vulnerability,
+                fb_countries = FB.countries,
+                fb_status = FB.Status,
+                fb_length_weight_measure = Length.measure,
+                fb_a = a,
+                fb_b = b,
+                fb_a_ll = aLL,
+                fb_b_ll = bLL,
+                fb_length_weight_source = Source_Level) %>%
   
   dplyr::left_join(keep) %>%
   
-  dplyr::mutate(Australian.source = "CAAB",
-                Global.source = "FishBase",
-                Local.source = "Harvey et al 2020") %>%
+  dplyr::mutate(australian_source = "CAAB",
+                global_source = "FishBase",
+                local_source = "Harvey et al 2020") %>%
   
-  dplyr::mutate(Scientific = paste(Genus, Species)) %>%
+  dplyr::mutate(scientific_name = paste(genus, species)) %>%
 
-  dplyr::mutate(Global.Region = "Australia") %>%
+  dplyr::mutate(global_region = "Australia") %>%
   
-  dplyr::select(c(Australian.source,
-                CAAB,
-                Class,
-                Order,
-                Family,
-                Genus,
-                Species,
-                Scientific,
-                Australian.common.name, # TODO need to add in 1st script or use the scraping
-                Marine.region,
+  dplyr::select(c(australian_source,
+                caab,
+                class,
+                order,
+                family,
+                genus,
+                species,
+                scientific_name,
+                australian_common_name, # TODO need to add in 1st script or use the scraping
+                marine_region,
                 
-                Global.source,
-                FB.code,
-                FB.length.at.maturity.cm,
+                global_source,
+                fb_code,
+                fb_length_at_maturity_cm,
                 # TODO need to add in 1st script
-                Subfamily,
-                Global.Region,
-                Length.measure,
-                a,
-                b,
-                aLL,
-                bLL,
-                Source_Level,
-                FB.Vulnerability,
-                FB.countries,
-                FB.Status,
-                FB.Length_MAX,
-                FB.LTypeMaxM,
-                RLS.trophic.group,
-                RLS.water.column,
-                RLS.substrate.type,
-                RLS.thermal.niche,
+                subfamily,
+                global_region,
                 
-                Local.source,
-                EPBC.Threat.Status,
-                IUCN.Ranking,
-                Fishing.mortality,
-                Fishing.type,
-                MinLegal.NT,
-                MaxLegal.NT,
-                MinLegal.WA,
-                MaxLegal.WA,
-                MinLegal.QLD,
-                MaxLegal.QLD,
-                MinLegal.NSW,
-                MaxLegal.NSW,
-                MinLegal.Vic,
-                MaxLegal.Vic,
-                MinLegal.SA,
-                MaxLegal.SA,
-                MinLegal.Tas,
-                MaxLegal.Tas
+                fb_length_weight_measure,
+                fb_a,
+                fb_b,
+                fb_a_ll,
+                fb_b_ll,
+                fb_length_weight_source,
+                
+                fb_vulnerability,
+                fb_countries,
+                fb_status,
+                fb_length_max,
+                fb_length_max_type,
+                rls_trophic_group,
+                rls_water_column,
+                rls_substrate_type,
+                rls_thermal_niche,
+                
+                local_source,
+                epbc_threat_status,
+                iucn_ranking,
+                
+                fishing_mortality,
+                fishing_type,
+                min_legal_nt,
+                max_legal_nt,
+                min_legal_wa,
+                max_legal_wa,
+                min_legal_qld,
+                max_legal_qld,
+                min_legal_nsw,
+                max_legal_nsw,
+                min_legal_vic,
+                max_legal_vic,
+                min_legal_sa,
+                max_legal_sa,
+                min_legal_tas,
+                max_legal_tas
                 )) %>%
+  bind_rows(animals)
   
-  dplyr::rename('Scientific name' = Scientific)
-  
-  
-  
-test <- simple.lh %>% 
-  dplyr::group_by(CAAB) %>%
-  dplyr::summarise(n = n()) %>%
-  dplyr::filter(n > 1)
-
-test <- simple.lh %>%
-  filter(is.na(CAAB))
-  
+unique(simple.lh$class)
 
 saveRDS(simple.lh, "data/simple.life.history.RDS")
 
@@ -200,7 +269,7 @@ global = createStyle(fontColour = "black", bgFill = "#FCE5CD")
 local = createStyle(fontColour = "black", bgFill = "#FFF2CC")
 
 # Create new workbook
-wb = createWorkbook(title = "fish.life.history")
+wb = createWorkbook(title = "life.history")
 
 # Add Sheet 1 - Information -----
 addWorksheet(wb, "information")

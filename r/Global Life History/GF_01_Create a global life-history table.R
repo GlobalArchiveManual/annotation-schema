@@ -100,10 +100,6 @@ bay_lwrs <- read.csv("data/bayesian_length-weights.csv") %>% distinct()
 # write.csv(bay_lwrs, "data/bayesian_length-weights.csv", row.names = FALSE)
 
 
-test <- bay_lwrs %>%
-  group_by(species) %>% #, lwa_m, lwa_sd, lwb_m, lwb_sd
-  summarise(n= n())
-
 # Get list of synyonms
 synonyms <- synonyms(all.species$scientific) %>% 
   ga.clean.names() %>%
@@ -246,22 +242,18 @@ species.also.a.synonym <- worms.synonyms %>%
 # To register for a IUCN API RUN 'rl_use_iucn()' once you have applied and received your API TOKEN then run 'usethis::edit_r_environ()' and add "IUCN_REDLIST_KEY = XXXX" to the r environ
 rl_citation()
 
-t <- rl_search("Pagrus auratus")
-
 # get all results
 out <- rl_sp(all = TRUE)
-length(out)
 vapply(out, "[[", 1, "count")
-all_df <- do.call(rbind, lapply(out, "[[", "result"))
-head(all_df)
-NROW(all_df)
+iucn <- do.call(rbind, lapply(out, "[[", "result")) %>%
+  dplyr::filter(is.na(population)) %>%
+  dplyr::select(scientific_name, category)
 
-rl_sp_category('VU')
-rl_sp_category('LRlc')
-rl_sp_category('EN')
-rl_sp_category('EX')
-rl_sp_category('EX', parse = FALSE)
-rl_sp_category_('EX')
+saveRDS(iucn, "data/iucn.RDS")
+
+test <- iucn %>%
+  group_by(scientific_name) %>%
+  dplyr::summarise(n = n())
 
 
 # Get vulnerability ----
@@ -297,15 +289,71 @@ fblh <- all.species %>% # has 35,024 species
   full_join((all.worms)) %>% # Has 103 missing # the join increases the number of rows WHY?  # TODO
   full_join(fb.vul) %>%
   dplyr::select(-speccode) %>%
-  full_join(bay_lwrs)
-  #full_join(lwr)
+  full_join(bay_lwrs) %>%
+  dplyr::rename(aphia_id = aphiaid,
+                fb_body_shape = bodyshapei,
+                common_name = common.name,
+                scientific_name = scientific,
+                fb_environment = demerspelag,
+                fb_depth_range_shallow = depthrangeshallow,
+                fb_depth_range_deep = depthrangedeep,
+                fb_fao_fishing_area_endemic = fao.fishing.area.endemic,
+                fb_fao_fishing_area_introduced = fao.fishing.area.introduced,
+                fb_fao_fishing_area_native = fao.fishing.area.native,
+                fb_commerical_importance = importance,
+                fb_brackish = isbrackish,
+                fb_freshwater = isfreshwater,
+                fb_marine = ismarine,
+                fb_length_at_maturity_cm = length.at.maturity.cm,
+                fb_length_max = length.max,
+                fb_length_max_type = length.max.type,
+                fb_a = lwa_m,
+                fb_a_sd = lwa_sd,
+                fb_b = lwb_m,
+                fb_b_sd = lwb_sd,
+                fb_metric = metric,
+                fb_vulnerability = vulnerability) %>%
+  dplyr::select(-c(status, depthrangecomdeep, depthrangecomshallow)) %>% # remove 
+  
+  dplyr::mutate(marine_region = paste(fb_fao_fishing_area_endemic, fb_fao_fishing_area_introduced, fb_fao_fishing_area_native, sep = ", ")) %>%
+  dplyr::mutate(marine_region = str_replace_all(marine_region, c("NA, NA, " = "", ", NA, NA" = ""))) %>%
+  dplyr::select(aphia_id, scientific_name, kingdom, phylum, class, order, family, genus, species, common_name,
+                fb_length_at_maturity_cm, fb_length_max, fb_length_max_type,
+                fb_a, fb_a_sd, fb_b, fb_b_sd, fb_metric, fb_body_shape, 
+                fb_commerical_importance,
+                fb_depth_range_shallow, fb_depth_range_deep,
+                marine_region, fb_fao_fishing_area_endemic, fb_fao_fishing_area_introduced, fb_fao_fishing_area_native, 
+                fb_environment, fb_marine, fb_freshwater, fb_brackish, fb_vulnerability)%>%
+  dplyr::mutate(aphia_id = as.character(aphia_id)) %>%
+  filter(!is.na(kingdom))
+  
+test <- fblh %>%
+  select(fb_all_fao_fishing_areas) %>%
+  mutate(marine.region = strsplit(as.character(fb_all_fao_fishing_areas), split = ", ")) %>%
+  unnest(marine.region) %>%
+  distinct(marine.region)
 
-write.csv(fblh, "output/fish/global_fish.life.history.csv")
+animals <- readRDS("data/animals_global_with_dist.RDS") %>%
+  dplyr::rename(aphia_id = taxonid) %>%
+  tidyr::separate(scientific_name, into = c("genus", "species"), remove = FALSE, extra = "merge") 
+
+names(animals)
+  
+# Bind with IUCN
+life_history <- bind_rows(fblh, animals) %>%
+  left_join(iucn)
+  
+names(life_history)
+
+missing <- life_history %>%
+  filter(is.na(phylum))
+
+write.csv(life_history, "output/fish/global_fish.life.history.csv")
 write.csv(worms.synonyms, "output/fish/global_fish.synonyms.csv")
 
 
 # Write files for CheckEM
-write.csv(fblh, "output/CheckEM/global_fish.life.history.csv")
+write.csv(life_history, "output/CheckEM/global_fish.life.history.csv")
 write.csv(worms.synonyms, "output/CheckEM/global_fish.synonyms.csv")
 write.csv(species.also.a.synonym, "output/CheckEM/global_fish.ambiguous.synonyms.csv")
 
