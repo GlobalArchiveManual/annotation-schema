@@ -171,6 +171,9 @@ species_with_id <- clean_caab %>%
 distributions <- readRDS("data/distributions_worms_animals_australia.RDS") %>%
   distinct()
 
+test <- wm_distribution_(id = 382879)
+
+
 # Get shapefiles for the marine regions using the mregion package ----
 
 realm <- mr_shp(key = "Ecoregions:realm") %>%

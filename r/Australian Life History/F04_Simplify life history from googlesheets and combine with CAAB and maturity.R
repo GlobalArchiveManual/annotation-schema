@@ -261,7 +261,10 @@ simple.lh <- caab.combined %>%
   
 unique(simple.lh$class)
 
+names(simple.lh) %>% sort()
+
 saveRDS(simple.lh, "data/simple.life.history.RDS")
+saveRDS(simple.lh, "C:/GitHub/CheckEMV2/data/simple.life.history.RDS") # to update CheckEM
 
 # Define styles for excel
 aus = createStyle(fontColour = "black", bgFill = "#D9EAD3")
@@ -396,3 +399,4 @@ hour <- str_sub(time, 10, 15)
 
 # Save the workbook
 saveWorkbook(wb, paste("output/fish/fish.life.history", date, hour, "xlsx", sep = "."), overwrite = TRUE)
+

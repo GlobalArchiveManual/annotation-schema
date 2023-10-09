@@ -9,107 +9,109 @@ caab <- readRDS("data/caab.with.regions.RDS") %>%
   dplyr::mutate(scientific.name = paste(genus, species, sep = " ")) %>%
   dplyr::filter(!species == "spp")
 
-# TESTING 
-# Specify the URL of the website
-url <- "https://www.cmar.csiro.au/caab/taxon_report.cfm?caab_code=37337038"
-
-# Read the webpage content as lines
-webpage <- readLines(url)
-
-# Send a GET request to the webpage and parse the HTML content
-page <- read_html(url)
-
-# Find the second table on the webpage
-table <- page %>% html_nodes("table")
-
-# Convert the table to a data frame
-table_df <- html_table(table, fill = TRUE)
-
-# Print the table
-print(table_df)
-
-caab.info <- table_df[[1]] %>%
-  pivot_wider(names_from = X1, values_from = X2) %>%
-  ga.clean.names() %>%
-  glimpse()
-
-names(caab.info) <- (sub("[.]$", "", names(caab.info))) # Remove full stops from end of names
-names(caab.info)
-
-species.info <- table_df[[2]] %>%
-  dplyr::select(X1, X2) %>%
-  dplyr::filter(X1 %in% c("Family:",
-                          "Standard Name (AS5300):",
-                          "Synonyms:",
-                          "WoRMS")) %>%
-  pivot_wider(names_from = X1, values_from = X2) %>%
-  ga.clean.names() %>%
-  glimpse()
-
-names(species.info) <- (sub("[.]$", "", names(species.info))) # Remove full stops from end of names
-names(species.info)
-
-info <- bind_cols(caab.info, species.info)
-
-# Loop through all CAAB codes (takes roughly an hour)
-temp.info <- data.frame()
-
-for (caab.code in unique(caab$caab_code)) {
-  
-  url <- paste0("https://www.cmar.csiro.au/caab/taxon_report.cfm?caab_code=", caab.code)
-  
-  # Read the webpage content as lines
-  webpage <- readLines(url)
-  
-  # Send a GET request to the webpage and parse the HTML content
-  page <- read_html(url)
-  
-  # Find the second table on the webpage
-  table <- page %>% html_nodes("table")
-  
-  # Convert the table to a data frame
-  table_df <- html_table(table, fill = TRUE)
-  
-  # # Print the table
-  # print(table_df)
-  
-  caab.info <- table_df[[1]] %>%
-    pivot_wider(names_from = X1, values_from = X2) %>%
-    ga.clean.names()
-  
-  names(caab.info) <- (sub("[.]$", "", names(caab.info))) # Remove full stops from end of names
-  names(caab.info)
-  
-  species.info <- table_df[[2]] %>%
-    dplyr::select(X1, X2) %>%
-    dplyr::filter(X1 %in% c("Family:",
-                            "Standard Name (AS5300):",
-                            "Standard Name:",
-                            "Synonyms:",
-                            "WoRMS")) %>%
-    pivot_wider(names_from = X1, values_from = X2) %>%
-    ga.clean.names()
-  
-  names(species.info) <- (sub("[.]$", "", names(species.info))) # Remove full stops from end of names
-  names(species.info)
-  
-  info <- bind_cols(caab.info, species.info)
-  
-  temp.info <- bind_rows(temp.info, info)
-  
-  message(paste("up to ", nrow(temp.info), "of ", nrow(caab)))
-  
-}
-
-
-unique(temp.info$scientific.nameand.authority)
-unique(temp.info$family)
-
-saveRDS(temp.info, "data/scraped.caab.RDS")
+# # TESTING
+# # Specify the URL of the website
+# url <- "https://www.cmar.csiro.au/caab/taxon_report.cfm?caab_code=37337038"
+# 
+# # Read the webpage content as lines
+# webpage <- readLines(url)
+# 
+# # Send a GET request to the webpage and parse the HTML content
+# page <- read_html(url)
+# 
+# # Find the second table on the webpage
+# table <- page %>% html_nodes("table")
+# 
+# # Convert the table to a data frame
+# table_df <- html_table(table, fill = TRUE)
+# 
+# # Print the table
+# print(table_df)
+# 
+# caab.info <- table_df[[1]] %>%
+#   pivot_wider(names_from = X1, values_from = X2) %>%
+#   ga.clean.names() %>%
+#   glimpse()
+# 
+# names(caab.info) <- (sub("[.]$", "", names(caab.info))) # Remove full stops from end of names
+# names(caab.info)
+# 
+# species.info <- table_df[[2]] %>%
+#   dplyr::select(X1, X2) %>%
+#   dplyr::filter(X1 %in% c("Family:",
+#                           "Standard Name (AS5300):",
+#                           "Synonyms:",
+#                           "WoRMS")) %>%
+#   pivot_wider(names_from = X1, values_from = X2) %>%
+#   ga.clean.names() %>%
+#   glimpse()
+# 
+# names(species.info) <- (sub("[.]$", "", names(species.info))) # Remove full stops from end of names
+# names(species.info)
+# 
+# info <- bind_cols(caab.info, species.info)
+# 
+# # Loop through all CAAB codes (takes roughly an hour)
+# temp.info <- data.frame()
+# 
+# for (caab.code in unique(caab$caab_code)) {
+# 
+#   url <- paste0("https://www.cmar.csiro.au/caab/taxon_report.cfm?caab_code=", caab.code)
+# 
+#   # Read the webpage content as lines
+#   webpage <- readLines(url)
+# 
+#   # Send a GET request to the webpage and parse the HTML content
+#   page <- read_html(url)
+# 
+#   # Find the second table on the webpage
+#   table <- page %>% html_nodes("table")
+# 
+#   # Convert the table to a data frame
+#   table_df <- html_table(table, fill = TRUE)
+# 
+#   # # Print the table
+#   # print(table_df)
+# 
+#   caab.info <- table_df[[1]] %>%
+#     pivot_wider(names_from = X1, values_from = X2) %>%
+#     ga.clean.names()
+# 
+#   names(caab.info) <- (sub("[.]$", "", names(caab.info))) # Remove full stops from end of names
+#   names(caab.info)
+# 
+#   species.info <- table_df[[2]] %>%
+#     dplyr::select(X1, X2) %>%
+#     dplyr::filter(X1 %in% c("Family:",
+#                             "Standard Name (AS5300):",
+#                             "Standard Name:",
+#                             "Synonyms:",
+#                             "WoRMS")) %>%
+#     pivot_wider(names_from = X1, values_from = X2) %>%
+#     ga.clean.names()
+# 
+#   names(species.info) <- (sub("[.]$", "", names(species.info))) # Remove full stops from end of names
+#   names(species.info)
+# 
+#   info <- bind_cols(caab.info, species.info)
+# 
+#   temp.info <- bind_rows(temp.info, info)
+# 
+#   message(paste("up to ", nrow(temp.info), "of ", nrow(caab)))
+# 
+# }
+# 
+# 
+# unique(temp.info$scientific.nameand.authority)
+# unique(temp.info$family)
+# 
+# saveRDS(temp.info, "data/scraped.caab.RDS")
+# 
+# 
 
 # Started at 10:45
 
-info <- temp.info
+info <- readRDS("data/scraped.caab.RDS")
 
 # Remove spaces from CAAB
 info$caab.code <- gsub(" \nshow as JSON", "", info$caab.code)
@@ -403,9 +405,12 @@ synonyms <- clean.info %>%
                                                          "[,]$" = ""))) %>%
   
   dplyr::mutate(synonyms = trimws(synonyms)) %>%
+  dplyr::mutate(family = str_replace_all(.$family, c("[^[:alnum:]]" = "", "[[:punct:]]" = "", "[:]$" = ""))) %>%
   dplyr::mutate(synonym.family = family) %>%
   tidyr::separate(synonyms, into = c("synonym.genus", "synonym.species"), sep = " ") %>%
   dplyr::filter(!scientific.name == paste(synonym.genus, synonym.species))
+
+unique(synonyms$family) %>% sort()
 
 # Test for actual species that are "synoynms"
 test.dat <- synonyms %>% dplyr::mutate(scientific.name = paste(synonym.genus, synonym.species)) %>% distinct(scientific.name)
@@ -413,7 +418,15 @@ test.dat <- synonyms %>% dplyr::mutate(scientific.name = paste(synonym.genus, sy
 synonym.is.actual.species <- semi_join(test.dat, clean.info) %>%
   tidyr::separate(scientific.name, into = c("synonym.genus", "synonym.species")) # 60 species where the synonym is also a species, need to remove these from final data
 
-final.synonyms <- anti_join(synonyms, synonym.is.actual.species)
+final.synonyms <- anti_join(synonyms, synonym.is.actual.species) 
+
+test.multiple.matches <- final.synonyms %>%
+  dplyr::group_by(synonym.family, synonym.genus, synonym.species) %>%
+  dplyr::summarise(n = n()) %>%
+  dplyr::filter(n > 1)
+
+final.synonyms <- anti_join(final.synonyms, test.multiple.matches) 
+
 final.caab.codes <- clean.info %>%
   dplyr::select(-c(synonyms))
 

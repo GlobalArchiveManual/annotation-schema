@@ -238,22 +238,19 @@ species.also.a.synonym <- worms.synonyms %>%
   dplyr::rename(valid.name.too.but.also.a.synonym.for.correct.name = scientific)
 
 # Get IUCN ranking ----
-# This requires a IUCN API
-# To register for a IUCN API RUN 'rl_use_iucn()' once you have applied and received your API TOKEN then run 'usethis::edit_r_environ()' and add "IUCN_REDLIST_KEY = XXXX" to the r environ
-rl_citation()
-
-# get all results
-out <- rl_sp(all = TRUE)
-vapply(out, "[[", 1, "count")
-iucn <- do.call(rbind, lapply(out, "[[", "result")) %>%
-  dplyr::filter(is.na(population)) %>%
-  dplyr::select(scientific_name, category)
-
-saveRDS(iucn, "data/iucn.RDS")
-
-test <- iucn %>%
-  group_by(scientific_name) %>%
-  dplyr::summarise(n = n())
+iucn.all <- readRDS("data/iucn.RDS") %>%
+  dplyr::rename(iucn_ranking = category) %>%
+  dplyr::mutate(iucn_ranking = case_when(
+    iucn_ranking %in% "DD" ~ "Data Deficient",
+    iucn_ranking %in% "LC" ~ "Least Concern",
+    iucn_ranking %in% "NT" ~ "Near Threatened",
+    iucn_ranking %in% "VU" ~ "Vulnerable",
+    iucn_ranking %in% "EN" ~ "Endangered",
+    iucn_ranking %in% "CR" ~ "Critically Endangered",
+    iucn_ranking %in% "EW" ~ "Extinct in the Wild",
+    iucn_ranking %in% "EX" ~ "Extinct"
+  )) %>%
+  glimpse()
 
 
 # Get vulnerability ----
@@ -326,6 +323,8 @@ fblh <- all.species %>% # has 35,024 species
                 fb_environment, fb_marine, fb_freshwater, fb_brackish, fb_vulnerability)%>%
   dplyr::mutate(aphia_id = as.character(aphia_id)) %>%
   filter(!is.na(kingdom))
+
+names(fblh)
   
 test <- fblh %>%
   select(fb_all_fao_fishing_areas) %>%
@@ -341,7 +340,7 @@ names(animals)
   
 # Bind with IUCN
 life_history <- bind_rows(fblh, animals) %>%
-  left_join(iucn)
+  left_join(iucn.all)
   
 names(life_history)
 
@@ -356,6 +355,13 @@ write.csv(worms.synonyms, "output/fish/global_fish.synonyms.csv")
 write.csv(life_history, "output/CheckEM/global_fish.life.history.csv")
 write.csv(worms.synonyms, "output/CheckEM/global_fish.synonyms.csv")
 write.csv(species.also.a.synonym, "output/CheckEM/global_fish.ambiguous.synonyms.csv")
+
+saveRDS(life_history, "C:/GitHub/CheckEMV2/data/global_fish.life.history.RDS")
+saveRDS(worms.synonyms, "C:/GitHub/CheckEMV2/data/global_fish.synonyms.RDS")
+saveRDS(species.also.a.synonym, "C:/GitHub/CheckEMV2/data/global_fish.ambiguous.synonyms.RDS")
+
+
+
 
 # species.missing.distribution <- anti_join(all.species, distribution) #  174 missing distribution
 # species.missing.maturity <- anti_join(all.species, maturity) #  33,111 missing maturity

@@ -37,14 +37,14 @@ codes <- common_names(validated) %>%
 # for (caab.name in unique(caab$scientific.name)) {
 # 
 #   validated.name <-  rfishbase::validate_names(caab.name)
-#   
+# 
 #   message(paste("validating: ", caab.name))
 #   message(paste("validated name:", validated.name))
-#   
+# 
 #   temp.dat <- data.frame(fishbase.scientific = validated.name,
 #                          caab.scientific = caab.name)
 #   code.crosswalk <- bind_rows(code.crosswalk, temp.dat)
-#   
+# 
 # }
 # 
 # mismatches <- code.crosswalk %>%
@@ -59,7 +59,7 @@ codes <- common_names(validated) %>%
 #   dplyr::mutate(speccode = if_else(speccode == "0", NA, speccode)) %>%
 #   dplyr::mutate(across(c("fishbase.scientific", "speccode"), ~if_else(.=="", NA, as.character(.)))) %>%
 #   glimpse()
-#
+# 
 # saveRDS(code.crosswalk.codes, "data/code.crosswalk.codes.RDS")
 
 code.crosswalk.codes <- readRDS("data/code.crosswalk.codes.RDS")
@@ -211,7 +211,7 @@ complete.lw <- info %>%
   dplyr::select(fishbase.scientific, type, a, b, all, bll, source.level) %>%
   dplyr::rename(aLL = all, bLL = bll, Length.measure = type, Source_Level = source.level)
 
-# # Get IUCN status - takes roughly 40 minutes
+# # # Get IUCN status - takes roughly 40 minutes
 # iucn <- data.frame()
 # 
 # for (species in validated) {
@@ -239,10 +239,10 @@ complete.lw <- info %>%
 #                                                              "NT" = "Near Threatened",
 #                                                              "LC" = "Least Concern",
 #                                                              "DD" = "Data Deficient"))) %>%
-#   
+# 
 #   dplyr::select(fishbase.scientific, IUCN.ranking) %>%
 #   distinct()
-# 
+# # 
 # saveRDS(final.iucn, "data/final.iucn.RDS")
 final.iucn <- readRDS("data/final.iucn.RDS")
 

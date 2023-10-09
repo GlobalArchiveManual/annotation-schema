@@ -6,13 +6,14 @@ extras <- data.frame(FAMILY = c("Unknown", "Larval", "SUS", "Baitfish", "Sparida
                      'CAAB CODE' = c("0", "1", "2", "3", "4")) %>%
   dplyr::rename("CAAB CODE" = CAAB.CODE)
 
-lh <- readRDS("data/simple.life.history.RDS") 
+lh <- readRDS("data/simple.life.history.RDS") %>%
+  glimpse()
   
 all <- lh %>%  
-  dplyr::rename("CAAB CODE" = CAAB, 
-                FAMILY = Family,
-                GENUS = Genus, 
-                SPECIES = Species) %>%
+  dplyr::rename("CAAB CODE" = caab, 
+                FAMILY = family,
+                GENUS = genus, 
+                SPECIES = species) %>%
   dplyr::select(FAMILY, GENUS, SPECIES, "CAAB CODE") %>%
   dplyr::filter(!SPECIES %in% "spp") %>%
   dplyr::bind_rows(., extras)
