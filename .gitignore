@@ -27,4 +27,4 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 .secrets
-data/distributions/
+data/distributions
