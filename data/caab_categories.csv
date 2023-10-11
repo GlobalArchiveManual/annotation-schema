@@ -1,0 +1,48 @@
+Category,Category_code,Description,Notes,Include,Less than 1000
+Amphibia,38,,No records,No,
+Angiosperms,63,Flowering plants,,No,
+Annelida,22,Segmented worms,,No,
+Aves,40,Birds,,Yes,TRUE
+Bacteria,72,,,No,
+Biota,80,,,No,
+Biota traces,81,,,No,
+Bryophyta,60,Moss,,No,
+Bryozoa,20,,,No,
+"Chaetognatha, Cephalochordata, Hemichordata",36,Marine worms and lancelets,,No,
+Chlorophyta and Charophyta,56,Green algae,,No,
+Cnidaria,11,,,No,
+Crustacea - Malacostraca,28,,,Yes,FALSE
+Crustacea - non-Malacostraca,27,,,Yes,FALSE
+Ctenophora,12,,,Yes,TRUE
+Cyanobacteria and Prochlorophyta,70,,,No,
+Echinodermata,25,,,Yes,FALSE
+Fungi - Ascomycota,57,,,No,
+Fungi - all groups except Ascomycota,58,,,No,
+Gymnosperms,62,Seed producing plants,,No,
+Insecta (1),30,,No records,No,
+Insecta (2),31,,No records,No,
+Insecta (3),32,,No records,No,
+"Kamptozoa, Phoronida, Brachiopoda",19,Horseshoe worms and valved animals ,,No?,
+Lichens,59,,,No,
+Mammalia,41,,,Yes,TRUE
+Microalgae I,52,,,No,
+Microalgae II,53,,,No,
+Mollusca - Gastropoda,24,,,Yes,FALSE
+Mollusca - Non-Gastropod groups,23,,,Yes,FALSE
+Nematoda,16,Roundworms,,No,
+"Nematomorpha, Rotifera, Gastrotricha, Kinorhyancha, Priapulida",15,"Horsehair worms, wheel animals, hairybellies, mud dragons, penis worms",,No,
+Nemertea,14,Ribbon worms,,No,
+Phaeophyta,54,Brown algae,,No,
+Physical,82,,,No,
+Pisces,37,Fish,,Yes,FALSE
+Platyhelminthes,13,Flatworms,,No,
+Porifera,10,Sponges,,No,
+Protozoa - Sarcodina,51,,,No,
+"Protozoa - all groups except Sarcodina and ""algal"" phyla",50,,,No,
+Pteridophyta and allies,61,Ferns,,No,
+Reptilia,39,,,Yes,TRUE
+Rhodophyta,55,Red algae,,No,
+"Sipuncula, Echiura",17,Unsegmented annelid worms and spoon worms,,No,
+"Tardigrada, Pentastomida, Pycnogonida plus minor Arthropod groups",33,"Water bears/Moss piglets, tongue worms, sea spiders",,No,
+Tunicata,35,,,No,
+Viruses,75,,,No,
